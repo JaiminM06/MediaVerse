@@ -40,7 +40,7 @@ connectDB()
 /*
 (async ()=>{
     try {
-         await mongoose.connect(`${proccess.env.MONGODB_URI}/${DB_NAME}`)
+         await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}`)
          app.on("error",(error)=>{
             console.log(error)
          })

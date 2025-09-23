@@ -56,10 +56,10 @@ const userSchema = new Schema(
     }
 )
 
-//do not use () =>{} in pre and some other hookes because this donot have reference so we can not access the usermode so instes of it use function () {}
+//do not use () =>{} in pre and some other hookes because this donot have reference so we can not access the usermode so instead of it use function () {}
 userSchema.pre("save",async function(next){
     if(!this.isModified("password")) return next()
-    this.password =bcrypt.hash(this.password,10)
+    this.password = await bcrypt.hash(this.password,10)
     next()
 })
 

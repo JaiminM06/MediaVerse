@@ -6,14 +6,18 @@ const router = Router()
 router.route("/register").post(
     upload.fields([
         {
-            name:"avatar",
+            name:"avatar", 
             maxCount:1
         },
         {
             name:"coverImage",
             maxCount:1
         }
-    ]),
+    ]),(req, res, next) => {
+    console.log("Files:", req.files);
+    console.log("Body:", req.body);
+    next();
+  },
     registerUser
     )
 

@@ -41,8 +41,10 @@ const updateTweet = asyncHandler(async (req, res) => {
     const updatedContent= await Tweet.findByIdAndUpdate(
         tweetId,
         {
-            content:newContent
-        }
+            $set:{
+                content:newContent
+            }
+        },{new:true}
     
     )
     return res

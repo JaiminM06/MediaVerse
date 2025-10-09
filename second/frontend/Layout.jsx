@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Menu, Search, Bell, User } from "lucide-react";
 import { Outlet } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 const videos = [
   { id: 1, title: "Learn React in 10 Minutes", channel: "CodeMaster", views: "120K views", thumbnail: "https://picsum.photos/300/200?1" },
@@ -11,7 +12,7 @@ const videos = [
   
 ];
 
-export default function App() {
+export default function Layout() {
   const [openSidebar, setOpenSidebar] = useState(false);
 
   return (
@@ -24,6 +25,17 @@ export default function App() {
       >
         <div className="p-4 text-lg font-bold border-b">MyTube</div>
         <nav className="p-4 space-y-3">
+          <li className="block hover:text-red-500">
+            <li>
+              <NavLink
+        to='Videos'>🏠 Videos</NavLink>
+            </li>
+        <li>
+          <NavLink
+        to='upload'>upload video</NavLink>
+        </li>
+        
+        </li>
           <a href="#" className="block hover:text-red-500">🏠 Home</a>
           <a href="#" className="block hover:text-red-500">🔥 Trending</a>
           <a href="#" className="block hover:text-red-500">📺 Subscriptions</a>
@@ -56,8 +68,9 @@ export default function App() {
             <User />
           </div>
         </header>
+        <Outlet/>
       </div>
-      <Outlet/>
+      
     </div>
     
   );

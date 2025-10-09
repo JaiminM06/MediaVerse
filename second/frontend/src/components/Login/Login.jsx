@@ -13,7 +13,8 @@ function Login() {
       await axios.post("http://localhost:8000/api/v1/users/login", {
         email,
         password,
-      });
+      },
+    { withCredentials: true });
       alert("Login successful!");
       navigate("/Dashboard");
     } catch (err) {

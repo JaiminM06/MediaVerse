@@ -14,7 +14,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
         {
             owner:req.user._id
         }
-    )
+    ).populate("owner", "username");
     return res
     .status(200)
     .json(new ApiResponse(200,videos,"videos fetched Successfully"))

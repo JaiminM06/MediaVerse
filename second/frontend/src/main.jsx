@@ -9,6 +9,7 @@ import Dashboard from './components/dashboard/Dashboard.jsx'
 import Layout from '../Layout.jsx'
 import Videos from './components/Videos/Videos.jsx'
 import Upload from './components/Videos/upload.jsx'
+import VideoPlayer from './components/Videos/videoPlayer.jsx'
 
 
 const router= createBrowserRouter(
@@ -18,8 +19,9 @@ const router= createBrowserRouter(
       <Route path='/Login' element={<Login/>}/>
       <Route path='/Register' element={<Register/>}/>
       <Route path='/Dashboard'element={<Layout/>}>
-        <Route path='Videos' element={<Videos/>}/>
-        <Route path='upload' element={<Upload/>}/>
+        <Route path='getVideos' element={<Videos/>}/>
+          <Route path=':id' element={<VideoPlayer/>}/>
+        <Route path='uploadVideo' element={<Upload/>}/>
       </Route>
       </>
     

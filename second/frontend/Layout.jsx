@@ -25,17 +25,11 @@ export default function Layout() {
       >
         <div className="p-4 text-lg font-bold border-b">MyTube</div>
         <nav className="p-4 space-y-3">
-          <li className="block hover:text-red-500">
-            <li>
-              <NavLink
-        to='Videos'>🏠 Videos</NavLink>
-            </li>
-        <li>
-          <NavLink
-        to='upload'>upload video</NavLink>
-        </li>
-        
-        </li>
+          
+          <NavLink className="block hover:text-red-500"
+        to='uploadVideo'>📤 Upload video</NavLink>
+        <NavLink className="block hover:text-red-500"
+        to='getVideos'> 🎥 My Videos</NavLink>
           <a href="#" className="block hover:text-red-500">🏠 Home</a>
           <a href="#" className="block hover:text-red-500">🔥 Trending</a>
           <a href="#" className="block hover:text-red-500">📺 Subscriptions</a>

@@ -67,7 +67,7 @@ const getVideoById = asyncHandler(async (req, res) => {
     if(!videoId?.trim()){
         throw new ApiError(400,"videoId is missing")
     }
-    const video= await Video.findById(videoId)
+    const video= await Video.findById(videoId).populate("owner","username")
 return res
     .status(200)
     .json(

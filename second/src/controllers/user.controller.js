@@ -420,6 +420,18 @@ const getWatchHistory = asyncHandler(async(req,res)=>{
     .status(200)
     .json(new ApiResponse(200,user[0].WatchHistory,"Watched history fetched successfully"))
 })
+
+const getUserById =asyncHandler(async(req,res)=>{
+        const {userid}=req.params
+        console.log(userid)
+        const user= await User.findById(userid)
+        console.log(user)
+        return res
+        .status(200)
+        .json(new ApiResponse(200, user, "Cover Image updated Successfully"))
+})
+
+
 export {
     registerUser,
     loginUser,
@@ -431,5 +443,6 @@ export {
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
-    getWatchHistory
+    getWatchHistory,
+    getUserById
 }

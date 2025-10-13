@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Menu, Search, Bell, User } from "lucide-react";
 import { Outlet } from "react-router-dom";
 import { NavLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const videos = [
   { id: 1, title: "Learn React in 10 Minutes", channel: "CodeMaster", views: "120K views", thumbnail: "https://picsum.photos/300/200?1" },
@@ -14,6 +15,7 @@ const videos = [
 
 export default function Layout() {
   const [openSidebar, setOpenSidebar] = useState(false);
+  const navigate= useNavigate()
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -59,10 +61,11 @@ export default function Layout() {
 
           <div className="flex items-center gap-4">
             <Bell />
-            <User />
+            <User onClick={()=>{navigate('/Home/user')}}/>
           </div>
         </header>
-        <Outlet/>
+        <main className="overflow-y-auto">
+          <Outlet/></main>   
       </div>
       
     </div>

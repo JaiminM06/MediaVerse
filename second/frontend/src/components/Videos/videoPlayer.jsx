@@ -109,7 +109,7 @@ export default function VideoPlayer() {
       }
     };
 
-    fetchAvatar();
+    fetchSubscriber();
   }, [video]);
 
   

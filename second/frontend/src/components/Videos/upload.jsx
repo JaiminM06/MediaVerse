@@ -65,14 +65,14 @@ export default function VideoUpload() {
           onChange={(e) => setDescription(e.target.value)}
           className="w-full p-2 border rounded"
         />
-
+        <label htmlFor="">Thumbnail</label>
         <input
           type="file"
           accept="image/*"
           onChange={(e) => setThumbnail(e.target.files[0])}
           className="w-full"
         />
-
+        <label htmlFor="">Video</label>
         <input
           type="file"
           accept="video/*"

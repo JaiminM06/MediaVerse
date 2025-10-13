@@ -123,8 +123,8 @@ export default function Layout() {
               }`
             }
           >
-            
-            <span className={`${!sidebarOpen && 'md:hidden'}`}>🏠Home</span>
+            <span>🏠</span>
+            <span className={`${!sidebarOpen && 'md:hidden'}`}>Home</span>
           </NavLink>
           
           <NavLink
@@ -137,7 +137,8 @@ export default function Layout() {
               }`
             }
           >
-            <span className={`${!sidebarOpen && 'md:hidden'}`}>📤Upload Video</span>
+            <span>📤</span>
+            <span className={`${!sidebarOpen && 'md:hidden'}`}>Upload Video</span>
           </NavLink>
           
           {/* <NavLink
@@ -154,15 +155,16 @@ export default function Layout() {
           </NavLink> */}
           
           <a href="#" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-red-500 transition-colors">
-            <span className={`${!sidebarOpen && 'md:hidden'}`}>🔥Trending</span>
+            <span>🔥</span>
+            <span className={`${!sidebarOpen && 'md:hidden'}`}>Trending</span>
           </a>
-          
           <a href="#" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-red-500 transition-colors">
-            <span className={`${!sidebarOpen && 'md:hidden'}`}>📺Subscriptions</span>
+            <span>📺</span>
+            <span className={`${!sidebarOpen && 'md:hidden'}`}>Subscriptions</span>
           </a>
-          
           <a href="#" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-red-500 transition-colors">
-            <span className={`${!sidebarOpen && 'md:hidden'}`}>📚Library</span>
+            <span>📚</span>
+            <span className={`${!sidebarOpen && 'md:hidden'}`}>Library</span>
           </a>
         </nav>
       </div>

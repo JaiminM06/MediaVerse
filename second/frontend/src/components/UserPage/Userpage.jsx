@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { use } from "react";
 
 function UserPage() {
   const [user, setUser] = useState(null);
@@ -33,7 +34,7 @@ function UserPage() {
   }, []);
   const handleLogout= async () =>{
     try {
-      const res = await axios.post("http://localhost:8000/api/v1/users/logout", {
+      const res = await axios.post("http://localhost:8000/api/v1/users/logout",{}, {
           withCredentials: true,
         });
         console.log(res)
@@ -60,25 +61,54 @@ function UserPage() {
     <div className="min-h-screen-[95vh] bg-gray-50 p-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-3xl font-bold text-indigo-700">🎬 Your Dashboard</h1>
-        <button
-          onClick={handleLogout}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition duration-300"
-        >
-          Logout
-        </button>
-      </div>
+  <h1 className="text-3xl font-bold text-indigo-700">🎬 Your Dashboard</h1>
+
+  <div className="flex gap-3">
+    <button
+      onClick={() => navigate("/Home/ManageVideos")}
+      className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition duration-300"
+    >
+      Manage Videos
+    </button>
+
+    <button
+      onClick={handleLogout}
+      className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition duration-300"
+    >
+      Logout
+    </button>
+  </div>
+</div>
+
 
       {/* User Info */}
-      <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">👤 Your Profile</h2>
-        <div className="grid md:grid-cols-2 gap-4 text-gray-600">
-          <p><span className="font-semibold text-gray-800">Name:</span> {user.username}</p>
-          <p><span className="font-semibold text-gray-800">Email:</span> {user.email}</p>
-          <p><span className="font-semibold text-gray-800">Subscribers:</span> {user.subscribersCount}</p>
-          <p><span className="font-semibold text-gray-800">Joined:</span> {new Date(user.createdAt).toDateString()}</p>
-        </div>
-      </div>
+      <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 flex flex-col md:flex-row items-center md:items-start gap-6">
+  {/* Avatar */}
+  <img
+    src={user.avatar}
+    alt="User Avatar"
+    className="w-32 h-32 rounded-full border-4 border-gray-200 object-cover"
+  />
+
+  {/* User Info */}
+  <div className="flex-1">
+    <h2 className="text-2xl font-bold text-gray-800 mb-2">{user.username}</h2>
+    <div className="grid sm:grid-cols-2 gap-3 text-gray-700">
+      <p>
+        <span className="font-semibold text-gray-800">Email:</span> {user.email}
+      </p>
+      <p>
+        <span className="font-semibold text-gray-800">Subscribers:</span>{user.subscribersCount}
+        
+      </p>
+      <p className="sm:col-span-2">
+        <span className="font-semibold text-gray-800">Joined:</span>{" "}
+        {new Date(user.createdAt).toDateString()}
+      </p>
+    </div>
+  </div>
+</div>
+
 
       {/* Videos Section */}
       <div className="bg-white rounded-2xl shadow-lg p-6 overflow-y-auto">

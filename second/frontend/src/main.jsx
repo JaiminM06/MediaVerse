@@ -9,7 +9,7 @@ import Layout from '../Layout.jsx'
 import Videos from './components/Videos/Videos.jsx'
 import Upload from './components/Videos/upload.jsx'
 import VideoPlayer from './components/Videos/videoPlayer.jsx'
-import Dashboard from './components/Dashboard/Dashboard.jsx'
+// import Dashboard from './components/Dashboard/Dashboard.jsx'
 import UserPage from './components/UserPage/Userpage.jsx'
 
 const router= createBrowserRouter(
@@ -27,6 +27,7 @@ const router= createBrowserRouter(
         <Route path='getVideos'element={<UserPage/>}/>
         <Route path=':id' element={<VideoPlayer/>}/>
         <Route path='user' element={<UserPage/>}/>
+        <Route path='uploadVideo' element={<Upload/>}/>
       </Route>
       </>
     

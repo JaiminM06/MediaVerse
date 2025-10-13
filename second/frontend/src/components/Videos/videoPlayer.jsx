@@ -145,7 +145,7 @@ export default function VideoPlayer() {
   
     
     return (
-  <div className="w-[1200px] mx-auto mt-8 px-4 overflow-y-auto max-h-[calc(100vh-64px)]  bg-gray-100">
+  <div className="w-[1200px] mx-auto mt-8 px-4  max-h-[calc(100vh-64px)]  bg-gray-100">
     {/* Video Player */}
     <div className="relative w-full rounded-xl overflow-hidden shadow-lg  bg-gray-100 ">
       <video

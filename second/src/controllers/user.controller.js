@@ -7,7 +7,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
 
-const generateAccessAndReferenceTokens = async (userId) => {
+const generateAccessAndRefreshTokens = async (userId) => {
     try {
         const user = await User.findById(userId)
         const accessToken = user.generateAccessToken()
@@ -121,14 +121,15 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Invalid user credentials")
     }
 
-    const { accessToken, refreshToken } = await generateAccessAndReferenceTokens(user._id)
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id)
     const loggedInUser = await User.findById(user._id).select("-password -refreshToken ")
     const options = {
         // if we do  httpsOnly and secure the cookie can only be modified by the server and not by the frontend
         httpOnly: true,
-        secure: false
+        secure: false,
+        sameSite:"lax"
     }
-
+    console.log(user)
     return res
         .status(200)
         .cookie("accessToken", accessToken, options)

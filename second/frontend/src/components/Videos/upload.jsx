@@ -47,7 +47,7 @@ export default function VideoUpload() {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white shadow-md rounded-lg p-6">
+    <div className="max-w-md mx-auto bg-white shadow-md rounded-lg p-6 mt-[40px]">
       <h2 className="text-xl font-semibold mb-4">Upload Video</h2>
 
       <form onSubmit={handleUpload} className="space-y-4">

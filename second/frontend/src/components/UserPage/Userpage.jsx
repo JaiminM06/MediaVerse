@@ -31,6 +31,17 @@ function UserPage() {
 
     fetchUserData();
   }, []);
+  const handleLogout= async () =>{
+    try {
+      const res = await axios.post("http://localhost:8000/api/v1/users/logout", {
+          withCredentials: true,
+        });
+        console.log(res)
+        navigate("/")
+    } catch (error) {
+      console.log("Logout Unsuccessful")
+    }
+  }
 
   if (loading)
     return (
@@ -46,12 +57,12 @@ function UserPage() {
       </div>
     );
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen-[95vh] bg-gray-50 p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-4">
         <h1 className="text-3xl font-bold text-indigo-700">🎬 Your Dashboard</h1>
         <button
-          onClick={() => (window.location.href = "/")}
+          onClick={handleLogout}
           className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition duration-300"
         >
           Logout
@@ -70,7 +81,7 @@ function UserPage() {
       </div>
 
       {/* Videos Section */}
-      <div className="bg-white rounded-2xl shadow-lg p-6">
+      <div className="bg-white rounded-2xl shadow-lg p-6 overflow-y-auto">
         <h2 className="text-2xl font-semibold text-gray-800 mb-6">🎥 Your Uploaded Videos</h2>
 
         {videos.length === 0 ? (

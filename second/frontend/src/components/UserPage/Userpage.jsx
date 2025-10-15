@@ -7,6 +7,7 @@ function UserPage() {
   const [user, setUser] = useState(null);
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userProfile,setUserProfile] =useState(null)
   const navigate = useNavigate();
   useEffect(() => {
     const fetchUserData = async () => {
@@ -16,7 +17,10 @@ function UserPage() {
           withCredentials: true,
         });
         setUser(userRes.data.data);
-
+        const profile=await axios.get(`http://localhost:8000/api/v1/users/c/${userRes.data.data.username}`,{
+          withCredentials:true,
+        })
+        setUserProfile(profile.data.data)
         // Fetch user's videos
         const videosRes = await axios.get(
           `http://localhost:8000/api/v1/videos/`,
@@ -61,9 +65,16 @@ function UserPage() {
     <div className="min-h-screen-[95vh] bg-gray-50 p-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
-  <h1 className="text-3xl font-bold text-indigo-700">🎬 Your Dashboard</h1>
+  <h1 className="text-3xl font-bold text-indigo-700">🎬 Your Account</h1>
 
   <div className="flex gap-3">
+     <button
+      onClick={() => navigate("/Home/ManageAccount")}
+      className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition duration-300"
+    >
+      Manage Account
+    </button>
+    
     <button
       onClick={() => navigate("/Home/ManageVideos")}
       className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition duration-300"
@@ -82,8 +93,10 @@ function UserPage() {
 
 
       {/* User Info */}
-      <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 flex flex-col md:flex-row items-center md:items-start gap-6">
-  {/* Avatar */}
+<div
+  className="bg-white rounded-2xl shadow-lg p-6 mb-8 flex flex-col md:flex-row items-center md:items-start gap-6 bg-cover bg-center"
+  style={{ backgroundImage: `url(${userProfile.coverImage})` }}
+>  {/* Avatar */}
   <img
     src={user.avatar}
     alt="User Avatar"
@@ -92,18 +105,21 @@ function UserPage() {
 
   {/* User Info */}
   <div className="flex-1">
-    <h2 className="text-2xl font-bold text-gray-800 mb-2">{user.username}</h2>
+    <h2 className="text-2xl font-bold text-gray-800 mb-2">{userProfile.username}</h2>
     <div className="grid sm:grid-cols-2 gap-3 text-gray-700">
       <p>
-        <span className="font-semibold text-gray-800">Email:</span> {user.email}
+        <span className="font-semibold text-gray-800">Email:</span> {userProfile.email}
       </p>
       <p>
-        <span className="font-semibold text-gray-800">Subscribers:</span>{user.subscribersCount}
+        <span className="font-semibold text-gray-800">Subscribers:</span>{userProfile.subscribersCount}
         
       </p>
-      <p className="sm:col-span-2">
+      <p className="sm:col-span-1">
         <span className="font-semibold text-gray-800">Joined:</span>{" "}
         {new Date(user.createdAt).toDateString()}
+      </p>
+      <p>
+        <span className="font-semibold text-gray-800">SubscribedTo:</span>{userProfile.channelsSubscribedToCount}
       </p>
     </div>
   </div>

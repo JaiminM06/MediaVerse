@@ -12,6 +12,7 @@ import VideoPlayer from './components/Videos/videoPlayer.jsx'
 // import Dashboard from './components/Dashboard/Dashboard.jsx'
 import UserPage from './components/UserPage/Userpage.jsx'
 import ManageVideos from './components/Videos/ManageVideos.jsx'
+import ManageAccount from './components/UserPage/ManageAccount.jsx'
 
 const router= createBrowserRouter(
   createRoutesFromElements(
@@ -23,6 +24,8 @@ const router= createBrowserRouter(
         <Route path='getVideos'element={<UserPage/>}/>
         <Route path=':id' element={<VideoPlayer/>}/>
         <Route path='user' element={<UserPage/>}/>
+        <Route path='ManageAccount' element={<ManageAccount/>}/>
+      
         <Route path='uploadVideo' element={<Upload/>}/>
         <Route path='ManageVideos' element={<ManageVideos/>}/>
       </Route>

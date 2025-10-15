@@ -286,7 +286,7 @@ const updateUserCoverImage =asyncHandler(async(req,res)=>{
         if(!coverImageLocalPath){
             new ApiError(400,"CoverImage file is missing")
         }
-        const coverImage=await uploadOnCloudinary(avatarLocalPath)
+        const coverImage=await uploadOnCloudinary(coverImageLocalPath)
         if(!coverImage){
             new ApiError(400,"Error while uploading on coverImage")
         }

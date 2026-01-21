@@ -13,30 +13,34 @@ import VideoPlayer from './components/Videos/videoPlayer.jsx'
 import UserPage from './components/UserPage/Userpage.jsx'
 import ManageVideos from './components/Videos/ManageVideos.jsx'
 import ManageAccount from './components/UserPage/ManageAccount.jsx'
-import Feed from './components/Videos/feed.jsx'   
+import Feed from './components/Videos/feed.jsx'
+import Trending from './components/Videos/Trending.jsx'
+import Library from './components/UserPage/Library.jsx'
 
-const router= createBrowserRouter(
+const router = createBrowserRouter(
   createRoutesFromElements(
     <>
-    <Route path='/' element={<Home/>}/>
-      <Route path='/Login' element={<Login/>}/>
-      <Route path='/Register' element={<Register/>}/>
-      <Route path='/Home' element={<Layout/>}>
-        <Route path='feed' element={<Feed/>}/>
-        <Route path='getVideos'element={<UserPage/>}/>
-        <Route path=':id' element={<VideoPlayer/>}/>
-        <Route path='user' element={<UserPage/>}/>
-        <Route path='ManageAccount' element={<ManageAccount/>}/>
-      
-        <Route path='uploadVideo' element={<Upload/>}/>
-        <Route path='ManageVideos' element={<ManageVideos/>}/>
+      <Route path='/' element={<Home />} />
+      <Route path='/Login' element={<Login />} />
+      <Route path='/Register' element={<Register />} />
+      <Route path='/Home' element={<Layout />}>
+        <Route path='feed' element={<Feed />} />
+        <Route path='trending' element={<Trending />} />
+        <Route path='library' element={<Library />} />
+        <Route path='getVideos' element={<UserPage />} />
+        <Route path=':id' element={<VideoPlayer />} />
+        <Route path='user' element={<UserPage />} />
+        <Route path='ManageAccount' element={<ManageAccount />} />
+
+        <Route path='uploadVideo' element={<Upload />} />
+        <Route path='ManageVideos' element={<ManageVideos />} />
       </Route>
-      </>
-    
+    </>
+
   )
 )
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <RouterProvider router={router}/>
+    <RouterProvider router={router} />
   </StrictMode>,
 )

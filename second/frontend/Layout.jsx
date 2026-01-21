@@ -1,318 +1,200 @@
-// // src/App.jsx
-// import { useState } from "react";
-// import { Menu, Search, Bell, User } from "lucide-react";
-// import { Outlet } from "react-router-dom";
-// import { NavLink } from "react-router-dom";
-// import { useNavigate } from "react-router-dom";
-
-
-
-// export default function Layout() {
-//   const [openSidebar, setOpenSidebar] = useState(false);
-//   const navigate= useNavigate()
-
-//   return (
-//     <div className="flex h-screen bg-gray-100">
-//       {/* Sidebar */}
-//       <div
-//         className={`fixed top-0 left-0 h-full bg-white shadow-md w-56 transform ${
-//           openSidebar ? "translate-x-0" : "-translate-x-full"
-//         } transition-transform md:translate-x-0 md:static`}
-//       >
-//         <div className="p-4 text-lg font-bold border-b">MyTube</div>
-//         <nav className="p-4 space-y-3">
-          
-//           <NavLink className="block hover:text-red-500"
-//         to='uploadVideo'>📤 Upload video</NavLink>
-//         <NavLink className="block hover:text-red-500"
-//         to='getVideos'> 🎥 My Videos</NavLink>
-//           <a href="#" className="block hover:text-red-500">🏠 Home</a>
-//           <a href="#" className="block hover:text-red-500">🔥 Trending</a>
-//           <a href="#" className="block hover:text-red-500">📺 Subscriptions</a>
-//           <a href="#" className="block hover:text-red-500">📚 Library</a>
-//         </nav>
-//       </div>
-
-//       {/* Main content */}
-//       <div className="flex-1 flex flex-col">
-//         {/* Navbar */}
-//         <header className="flex items-center justify-between bg-white px-4 py-2 shadow">
-//           <div className="flex items-center gap-2">
-//             <button onClick={() => setOpenSidebar(!openSidebar)} className="md:hidden">
-//               <Menu />
-//             </button>
-//             <span className="font-bold text-lg hidden md:block">MyTube</span>
-//           </div>
-
-//           <div className="flex items-center w-full max-w-lg bg-gray-100 rounded-full px-3 py-1">
-//             <input
-//               type="text"
-//               placeholder="Search"
-//               className="bg-transparent flex-1 outline-none px-2"
-//             />
-//             <Search className="text-gray-600" />
-//           </div>
-
-//           <div className="flex items-center gap-4">
-//             <Bell />
-//             <User onClick={()=>{navigate('/Home/user')}}/>
-//           </div>
-//         </header>
-//         <main className="overflow-y-auto">
-//           <Outlet/></main>   
-//       </div>
-      
-//     </div>
-    
-//   );
-// }
-
-// src/App.jsx
-// import { useState } from "react";
-// import { Menu, Search, Bell, User } from "lucide-react";
-// import { Outlet } from "react-router-dom";
-// import { NavLink } from "react-router-dom";
-// import { useNavigate } from "react-router-dom";
-
-// export default function Layout() {
-//   const [sidebarOpen, setSidebarOpen] = useState(true);
-//   const navigate = useNavigate();
-
-//   const toggleSidebar = () => {
-//     setSidebarOpen(!sidebarOpen);
-//   };
-
-//   return (
-//     <>
-//     <div className="min-h-screen flex flex-col">
-
-//     <header className="flex items-center justify-between bg-white px-4 py-2 shadow">
-
-//           <div className="flex items-center gap-2 overflow-y-auto">
-//             <button 
-//                 onClick={toggleSidebar}
-//                 className="p-2 hover:bg-gray-100 rounded-full transition-colors bg-blue-700"
-//               >
-//                 <Menu size={20} className="bg-blue-700" / >
-//               </button>
-//             <span className="font-bold text-lg hidden md:block">MyTube</span>
-//           </div>
-
-//           <div className="flex items-center w-full max-w-lg bg-gray-100 rounded-full px-3 py-1">
-//             <input
-//               type="text"
-//               placeholder="Search"
-//               className="bg-transparent flex-1 outline-none px-2"
-//             />
-//             <Search className="text-gray-600" />
-//           </div>
-
-//           <div className="flex items-center gap-4">
-//             <Bell />
-//             <User onClick={()=>{navigate('/Home/user')}}/>
-//           </div>
-//         </header>
-//         <div className="flex flex-1 bg-gray-100">
-//       {/* Sidebar */}
-//       <div
-//         className={`
-//           bg-white shadow-lg
-//           transition-all duration-300 ease-in-out
-//           flex flex-col
-//           ${sidebarOpen ? 'w-64' : 'w-0'}
-//           ${sidebarOpen ? 'opacity-100' : 'opacity-0 md:opacity-100'}
-//           overflow-y-auto
-//         `}
-//       >
-//         {/* Navigation */}
-//         <nav className="p-4 space-y-2 flex-1 min-w-[256px] md:min-w-0 overflow-y-auto">
-//           <NavLink
-//             to="/Home"
-//             className={({ isActive }) =>
-//               `flex items-center gap-3 p-3 rounded-lg transition-colors ${
-//                 isActive
-//                   ? 'bg-red-50 text-red-600 font-medium'
-//                   : 'text-gray-700 hover:bg-gray-100 hover:text-red-500'
-//               }`
-//             }
-//           >
-//             <span>🏠</span>
-//             <span className={`${!sidebarOpen && 'md:hidden'}`}>Home</span>
-//           </NavLink>
-          
-//           <NavLink
-//             to="uploadVideo"
-//             className={({ isActive }) =>
-//               `flex items-center gap-3 p-3 rounded-lg transition-colors ${
-//                 isActive
-//                   ? 'bg-red-50 text-red-600 font-medium'
-//                   : 'text-gray-700 hover:bg-gray-100 hover:text-red-500'
-//               }`
-//             }
-//           >
-//             <span>📤</span>
-//             <span className={`${!sidebarOpen && 'md:hidden'}`}>Upload Video</span>
-//           </NavLink>
-          
-  
-          
-//           <a href="#" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-red-500 transition-colors">
-//             <span>🔥</span>
-//             <span className={`${!sidebarOpen && 'md:hidden'}`}>Trending</span>
-//           </a>
-//           <a href="#" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-red-500 transition-colors">
-//             <span>📺</span>
-//             <span className={`${!sidebarOpen && 'md:hidden'}`}>Subscriptions</span>
-//           </a>
-//           <a href="#" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-red-500 transition-colors">
-//             <span>📚</span>
-//             <span className={`${!sidebarOpen && 'md:hidden'}`}>Library</span>
-//           </a>
-          
-//         </nav>
-//       </div>
-
-//       {/* Main content */}
-//       <div className="flex-1 flex flex-col">
-//         {/* Navbar */}
-        
-//         <main className="overflow-y-auto">
-//           <Outlet/></main>   
-//       </div>
-//     </div>
-//     </div>
-//     </>
-    
-//   );
-// }
-
-
-import { useState,useEffect } from "react";
-import { Menu, Search, Bell, User } from "lucide-react";
-import { Outlet } from "react-router-dom";
-import { NavLink } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";  
+import { useState, useEffect } from "react";
+import { Menu, Search, Bell, User, Home, Upload, Flame, Tv, Library, X, LogOut, Settings } from "lucide-react";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function Layout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile toggle
+  const [isExpanded, setIsExpanded] = useState(true); // Desktop collapse state
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
-    const [videos, setVideos] = useState([]);
 
-  useEffect(() => {
-    const fetchVideos = async () => {
-      try {
-        
-        const videosRes = await axios.get(
-          `http://localhost:8000/api/v1/videos/feed`,
-          { withCredentials: true }
-        );
-        setVideos(videosRes.data.data || []);
-      } catch (err) {
-        console.error("Error loading videos:", err);
-      }
-    };
-
-    fetchVideos();
-  }, []);
   const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
+    if (window.innerWidth < 768) {
+      setSidebarOpen(!sidebarOpen);
+    } else {
+      setIsExpanded(!isExpanded);
+    }
   };
 
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await axios.get("http://localhost:8000/api/v1/users/current-user", {
+          withCredentials: true,
+        });
+        setUser(res.data.data);
+      } catch (error) {
+        console.error("Failed to fetch user in layout:", error);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const navItems = [
+    { to: "/Home/feed", icon: Home, label: "Home" },
+    { to: "trending", icon: Flame, label: "Trending" },
+    { to: "library", icon: Library, label: "Library" },
+    { to: "uploadVideo", icon: Upload, label: "Upload" },
+    { to: "user", icon: User, label: "Profile" },
+  ];
+
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-50 text-slate-900 overflow-hidden font-sans">
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div
+      <aside
         className={`
-          bg-white shadow-lg
+          fixed md:static z-50
+          flex flex-col h-full bg-white border-r border-slate-200 shadow-2xl md:shadow-none
           transition-all duration-300 ease-in-out
-          flex flex-col
-          ${sidebarOpen ? 'w-64' : 'w-0'}
-          ${sidebarOpen ? 'opacity-100' : 'opacity-0 md:opacity-100'}
-          
-          
+          flex-shrink-0
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+          ${isExpanded ? "w-64" : "w-20"}
         `}
       >
-        <button 
-                onClick={toggleSidebar}
-                className="p-4 hover:bg-gray-100  transition-colors bg-blue-700 shadow"
-              >
-                <Menu size={20} className="bg-blue-700 " / >
-              </button>
         {/* Sidebar Header */}
+        <div className={`flex items-center ${isExpanded ? "justify-between px-4" : "justify-center"} h-16 border-b border-slate-100 transition-all`}>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/Home/feed")}>
+            <div className="flex items-center gap-4">
+            <button
+              onClick={toggleSidebar}
+              className="p-2 -ml-2 rounded-xl hover:bg-slate-100 text-slate-600"
+            >
+              <Menu size={20} />
+            </button>
+            <span className={`font-bold text-lg text-slate-900 md:hidden`}>MyTube</span>
+          </div>
+            <span className={`font-bold text-xl tracking-tight text-slate-900 overflow-hidden transition-all duration-300 ${isExpanded ? "w-auto opacity-100" : "w-0 opacity-0 hidden"}`}>
+              MyTube
+            </span>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="md:hidden p-2 hover:bg-slate-100 rounded-full text-slate-500"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-2 flex-1 min-w-[256px] md:min-w-0 overflow-y-auto">
-          <NavLink
-            to="/Home/feed"
-            className={({ isActive }) =>
-              `flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                isActive
-                  ? 'bg-red-50 text-red-600 font-medium'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-red-500'
-              }`
-            }
-          >
-            <span>🏠</span>
-            <span className={`${!sidebarOpen && 'md:hidden'}`}>Home</span>
-          </NavLink>
-          
-          
-          <NavLink
-            to="uploadVideo"
-            className={({ isActive }) =>
-              `flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                isActive
-                  ? 'bg-red-50 text-red-600 font-medium'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-red-500'
-              }`
-            }
-          >
-            <span>📤</span>
-            <span className={`${!sidebarOpen && 'md:hidden'}`}>Upload Video</span>
-          </NavLink>
-          
-          <a href="#" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-red-500 transition-colors">
-            <span>🔥</span>
-            <span className={`${!sidebarOpen && 'md:hidden'}`}>Trending</span>
-          </a>
-          <a href="#" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-red-500 transition-colors">
-            <span>📺</span>
-            <span className={`${!sidebarOpen && 'md:hidden'}`}>Subscriptions</span>
-          </a>
-          <a href="#" className="flex items-center gap-3 p-3 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-red-500 transition-colors">
-            <span>📚</span>
-            <span className={`${!sidebarOpen && 'md:hidden'}`}>Library</span>
-          </a>
-          
+        <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-200">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.label}
+              to={item.to}
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 font-medium group
+                ${isActive
+                  ? "bg-brand-50 text-brand-700 shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                } ${!isExpanded && "justify-center"}`
+              }
+              title={!isExpanded ? item.label : ""}
+            >
+              {({ isActive }) => (
+                <>
+                  <item.icon
+                    size={22}
+                    className={`flex-shrink-0 ${isActive ? "text-brand-600" : "text-slate-400 group-hover:text-slate-600"}`}
+                  />
+                  <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${isExpanded ? "w-auto opacity-100" : "w-0 opacity-0 hidden"}`}>
+                    {item.label}
+                  </span>
+                </>
+              )}
+            </NavLink>
+          ))}
         </nav>
-      </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col">
-        {/* Navbar */}
-        <header className="flex items-center justify-between bg-white px-4 py-2  shadow">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-lg hidden md:block">MyTube</span>
+        {/* User Mini Profile (Bottom) */}
+        {user && (
+          <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+            <div
+              className={`flex items-center gap-3 p-2 rounded-xl hover:bg-white hover:shadow-sm transition-all cursor-pointer group ${!isExpanded && "justify-center"}`}
+              onClick={() => navigate('/Home/user')}
+            >
+              <img
+                src={user.avatar}
+                alt="User"
+                className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm group-hover:border-brand-100 transition-colors flex-shrink-0"
+              />
+              {isExpanded && (
+                <>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-900 truncate group-hover:text-brand-700 transition-colors">{user.fullName}</p>
+                    <p className="text-xs text-slate-500 truncate">@{user.username}</p>
+                  </div>
+                  <Settings size={16} className="text-slate-400 group-hover:text-brand-600" />
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 h-full relative">
+        {/* Header */}
+        <header className="h-16 bg-white/90 backdrop-blur-xl border-b border-slate-200 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30 transition-shadow">
+          
+
+          {/* Search Bar - Better Centered */}
+          <div className="hidden md:flex flex-1 max-w-2xl mx-auto px-8 relative">
+            <div className="w-full relative group">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Search size={18} className="text-slate-400 group-focus-within:text-brand-500 transition-colors" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search videos, channels..."
+                className="w-full bg-slate-100 text-slate-900 pl-11 pr-4 py-2.5 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:bg-white transition-all border border-transparent focus:border-brand-200 placeholder-slate-400 shadow-sm"
+              />
+            </div>
           </div>
 
-          <div className="flex items-center w-full max-w-lg bg-gray-100 rounded-full px-3 py-1">
-            <input
-              type="text"
-              placeholder="Search"
-              className="bg-transparent flex-1 outline-none px-2"
-            />
-            <Search className="text-gray-600" />
-          </div>
+          {/* Right Actions */}
+          <div className="flex items-center gap-3">
+            <button className="p-2.5 rounded-full hover:bg-slate-100 text-slate-600 relative group transition-colors">
+              <Bell size={20} className="group-hover:text-slate-900" />
+              <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+            </button>
 
-          <div className="flex items-center gap-4">
-            <Bell />
-            <User onClick={()=>{navigate('/Home/user')}}/>
+            {user ? (
+              <button
+                onClick={() => navigate('/Home/user')}
+                className="ml-2 w-9 h-9 rounded-full overflow-hidden border-2 border-transparent hover:border-brand-200 focus:ring-2 focus:ring-brand-500/20 transition-all outline-none"
+              >
+                <img
+                  src={user.avatar}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/Login')}
+                className="ml-2 bg-brand-600 text-white px-5 py-2 rounded-full font-semibold text-sm hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20"
+              >
+                Sign In
+              </button>
+            )}
+
           </div>
         </header>
-        
-        <main className="overflow-y-auto">
-          <Outlet/></main>   
+
+        {/* Scrollable Content */}
+        <main className="flex-1 overflow-y-auto bg-gray-50 scrollbar-thin scrollbar-thumb-slate-300">
+          <Outlet />
+        </main>
       </div>
     </div>
   );

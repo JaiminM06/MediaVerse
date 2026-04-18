@@ -1,6 +1,8 @@
 import express from "express"
 import cors from "cors"
 import cookieParser from "cookie-parser"
+import path from "path"
+
 const app = express();
 
 app.use(cors({
@@ -14,11 +16,7 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }))
 app.use(express.static("public"))
 app.use(cookieParser())
 
-// Basic route to avoid "Cannot GET /"
-app.get("/", (req, res) => {
-    res.send("🚀 MediaVerse API is live and running perfectly!");
-})
-
+// Remove temporary GET / route since frontend will handle it
 
 //routes
 
@@ -43,7 +41,13 @@ app.use("/api/v1/comments", commentRouter)
 // app.use("/api/v1/playlist", playlistRouter)
 // app.use("/api/v1/dashboard", dashboardRouter)
 
-//http://localhost:8000/api/users/register     
+// Serve frontend code
+const _dirname = path.resolve();
+app.use(express.static(path.join(_dirname, "/frontend/dist")));
+
+app.get("*", (req, res) => {
+    res.sendFile(path.resolve(_dirname, "frontend", "dist", "index.html"));
+});
 
 import { ApiError } from "./utils/ApiError.js";
 

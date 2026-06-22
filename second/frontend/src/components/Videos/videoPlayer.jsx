@@ -16,6 +16,11 @@ export default function VideoPlayer() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const videoRef = useRef(null);
 
+  // QUALITY SELECTION STATE
+  const [levels, setLevels] = useState([]);
+  const [currentQuality, setCurrentQuality] = useState("Auto");
+  const [hlsInstance, setHlsInstance] = useState(null);
+
   // Setup Hls.js playback for M3U8 adaptive streams
   useEffect(() => {
     if (!video || !videoRef.current) return;
@@ -30,6 +35,11 @@ export default function VideoPlayer() {
         });
         hls.loadSource(video.videoFile);
         hls.attachMedia(videoElement);
+        setHlsInstance(hls);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setLevels(hls.levels || []);
+        });
       } else if (videoElement.canPlayType("application/vnd.apple.mpegurl")) {
         // Native support (Safari, iOS)
         videoElement.src = video.videoFile;
@@ -43,8 +53,25 @@ export default function VideoPlayer() {
       if (hls) {
         hls.destroy();
       }
+      setHlsInstance(null);
+      setLevels([]);
+      setCurrentQuality("Auto");
     };
   }, [video]);
+
+  const handleQualityChange = (e) => {
+    const value = e.target.value;
+    setCurrentQuality(value);
+
+    if (!hlsInstance) return;
+
+    if (value === "Auto") {
+      hlsInstance.currentLevel = -1; // -1 represents auto quality selection in HLS.js
+    } else {
+      const levelIndex = parseInt(value, 10);
+      hlsInstance.currentLevel = levelIndex;
+    }
+  };
 
   // COMMENTS STATE
   const [comments, setComments] = useState([]);
@@ -208,6 +235,31 @@ export default function VideoPlayer() {
             className="w-full h-full object-contain"
           />
         </div>
+
+        {/* Quality Selector */}
+        {levels.length > 0 && (
+          <div className="flex items-center justify-between bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 shadow-sm">
+            <span className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+              Adaptive Streaming Active
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500">Quality:</span>
+              <select
+                value={currentQuality}
+                onChange={handleQualityChange}
+                className="bg-white border border-slate-300 rounded-lg px-3 py-1 outline-none text-slate-800 font-semibold cursor-pointer shadow-sm hover:border-slate-400 transition-colors"
+              >
+                <option value="Auto">Auto</option>
+                {levels.map((level, index) => (
+                  <option key={index} value={index}>
+                    {level.height ? `${level.height}p` : `Variant ${index + 1}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
 
         {/* Video Details */}
         <div>

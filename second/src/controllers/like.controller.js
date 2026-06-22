@@ -8,7 +8,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     const {videoId} = req.params
     //TODO: toggle like on video
     const exists = await Like.findOne({
-        videoId:videoId,
+        video:videoId,
         likedBy:req.user._id
     })
     if(exists){
@@ -61,7 +61,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
         likedBy: req.user._id
     })
 
-    if (existingLike) {
+    if (exists) {
         await Like.findByIdAndDelete(exists._id)
         return res
             .status(200)

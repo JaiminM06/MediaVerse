@@ -20,7 +20,7 @@ export default function Layout() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await axios.get(`\${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/users/current-user`, {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/users/current-user`, {
           withCredentials: true,
         });
         setUser(res.data.data);

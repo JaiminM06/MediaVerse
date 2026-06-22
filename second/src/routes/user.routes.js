@@ -14,11 +14,7 @@ router.route("/register").post(
             name: "coverImage",
             maxCount: 1
         }
-    ]), (req, res, next) => {
-        console.log("Files:", req.files);
-        console.log("Body:", req.body);
-        next();
-    },
+    ]),
     registerUser
 )
 

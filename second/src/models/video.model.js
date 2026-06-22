@@ -34,10 +34,23 @@ const videoSchema =new Schema(
         owner:{
             type: Schema.Types.ObjectId,
             ref:"User"
-        }
-
-
-
+        },
+        processingStatus: {
+            type: String,
+            enum: ['uploading', 'processing', 'ready', 'failed'],
+            default: 'uploading'
+        },
+        rawFileKey: { type: String, default: null },
+        hlsManifestUrl: { type: String, default: null },
+        variants: [{ resolution: String, bitrate: Number, url: String, size: Number }],
+        metadata: {
+            codec: { type: String, default: null },
+            fps: { type: Number, default: null },
+            originalResolution: { type: String, default: null },
+            fileSize: { type: Number, default: null }
+        },
+        thumbnails: { type: [String], default: [] },
+        processingError: { type: String, default: null }
     },{
         timestamps:true
     }

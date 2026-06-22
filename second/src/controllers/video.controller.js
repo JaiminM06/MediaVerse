@@ -34,9 +34,14 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description} = req.body
-    console.log(req.files)
-    const videoLocalPath=req.files?.videoFile[0]?.path
-    const thumbnailLocalPath=req.files?.thumbnail[0]?.path
+    let videoLocalPath;
+    if (req.files && Array.isArray(req.files.videoFile) && req.files.videoFile.length > 0) {
+        videoLocalPath = req.files.videoFile[0].path;
+    }
+    let thumbnailLocalPath;
+    if (req.files && Array.isArray(req.files.thumbnail) && req.files.thumbnail.length > 0) {
+        thumbnailLocalPath = req.files.thumbnail[0].path;
+    }
     if (!videoLocalPath) {
         throw new ApiError(401, "video is required")
     }
@@ -60,9 +65,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
         owner:req.user._id,
         title
     })
-    console.log(videoDataset)
     const uploadedVideo = await Video.findById(videoDataset._id)
-    console.log(uploadedVideo)
     if (!uploadedVideo) {
         throw new ApiError(500, "something went wrong while uploading video")
     }
@@ -78,13 +81,33 @@ const getVideoById = asyncHandler(async (req, res) => {
     if(!videoId?.trim()){
         throw new ApiError(400,"videoId is missing")
     }
-    const video= await Video.findById(videoId).populate("owner","username")
-return res
-    .status(200)
-    .json(
-        new ApiResponse(200,video,"video fetched successfully")
+
+    // Increment video views
+    const video = await Video.findByIdAndUpdate(
+        videoId,
+        { $inc: { views: 1 } },
+        { new: true }
+    ).populate("owner", "username")
+
+    if (!video) {
+        throw new ApiError(404, "Video not found")
+    }
+
+    // Add to user watch history
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $addToSet: {
+                watchHistory: videoId
+            }
+        }
     )
-    //TODO: get video by id
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, video, "video fetched successfully")
+        )
 })
 
 const updateVideo = asyncHandler(async (req, res) => {

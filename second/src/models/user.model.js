@@ -47,6 +47,17 @@ const userSchema = new Schema(
     },
     refreshToken:{
         type:String,
+    },
+    searchHistory: {
+        type: [{
+            query:      { type: String, required: true },
+            searchedAt: { type: Date, default: Date.now }
+        }],
+        default: [],
+        validate: {
+            validator: function(arr) { return arr.length <= 10; },
+            message: 'Search history cannot exceed 10 entries'
+        }
     }
 
 

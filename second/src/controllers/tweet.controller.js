@@ -4,6 +4,7 @@ import {User} from "../models/user.model.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
+import { indexTweet as indexTweetSync, deleteTweet as deleteTweetSync } from "../services/typesenseSync.service.js"
 
 const createTweet = asyncHandler(async (req, res) => {
     //TODO: create tweet
@@ -13,6 +14,14 @@ const createTweet = asyncHandler(async (req, res) => {
         content:content,
         owner:user,
     })
+
+    // Sync with Typesense (fire and forget)
+    Tweet.findById(tweet._id).populate("owner", "username avatar")
+        .then(popTweet => {
+            if (popTweet) indexTweetSync(popTweet);
+        })
+        .catch(err => console.error("Typesense tweet index error on create:", err.message));
+
     return res
     .status(200)
     .json(new ApiResponse(200,tweet,"Tweet created successfully"))
@@ -47,6 +56,16 @@ const updateTweet = asyncHandler(async (req, res) => {
         },{new:true}
     
     )
+
+    // Sync with Typesense (fire and forget)
+    if (updatedContent) {
+        Tweet.findById(updatedContent._id).populate("owner", "username avatar")
+            .then(popTweet => {
+                if (popTweet) indexTweetSync(popTweet);
+            })
+            .catch(err => console.error("Typesense tweet index error on update:", err.message));
+    }
+
     return res
     .status(200)
     .json(new ApiResponse(200,updatedContent,"Tweet updated successfully"))
@@ -55,7 +74,17 @@ const updateTweet = asyncHandler(async (req, res) => {
 const deleteTweet = asyncHandler(async (req, res) => {
     //TODO: delete tweet
     const {tweetId} = req.params
-    await Tweet.findByIdAndDelete(tweetId)
+    const deletedTweet = await Tweet.findByIdAndDelete(tweetId)
+
+    // Sync with Typesense (fire and forget)
+    if (deletedTweet) {
+        try {
+            deleteTweetSync(tweetId);
+        } catch (syncError) {
+            console.error("Typesense tweet delete error:", syncError.message);
+        }
+    }
+
     return res
     .status(200)
     .json(new ApiResponse(200,{},"Tweet deleted successfully"))

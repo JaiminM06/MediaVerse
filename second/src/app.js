@@ -25,6 +25,9 @@ import playlistRouter from './routes/playlist.routes.js'
 import dashboardRouter from './routes/dashboard.routes.js'
 import uploadRouter from './routes/upload.routes.js'
 import notificationRouter from './routes/notification.routes.js'
+import searchRouter from './routes/search.routes.js'
+import recommendationRouter from './routes/recommendation.routes.js'
+import trendingRouter from './routes/trending.routes.js'
 
 // Route declarations
 app.use("/api/v1/users", userRouter)
@@ -37,6 +40,9 @@ app.use("/api/v1/playlists", playlistRouter)
 app.use("/api/v1/dashboard", dashboardRouter)
 app.use("/api/v1/upload", uploadRouter)
 app.use("/api/v1/notifications", notificationRouter)
+app.use("/api/v1/search", searchRouter)
+app.use("/api/v1", recommendationRouter)
+app.use("/api/v1", trendingRouter)
 
 // Global error handler
 import { ApiError } from "./utils/ApiError.js";

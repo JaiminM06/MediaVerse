@@ -10,6 +10,7 @@ import redisConnection from "../config/redis.js";
 import { Video } from "../models/video.model.js";
 import { s3Client, getCloudFrontUrl } from "../utils/s3.js";
 import { sendNotification } from "../services/notification.service.js";
+import { indexVideo } from "../services/typesenseSync.service.js";
 
 // Helper to resolve MIME type for HLS segments, playlist, and images
 const getContentType = (filename) => {
@@ -219,16 +220,24 @@ const videoProcessor = new Worker("video-processing", async (job) => {
         ];
 
         // 7. UPDATE video in MongoDB with final ready data
-        await Video.findByIdAndUpdate(videoId, {
+        const updatedVideo = await Video.findByIdAndUpdate(videoId, {
             processingStatus: "ready",
+            isPublished: true, // Automatically publish the video once it is processed and ready
             hlsManifestUrl,
             variants,
             thumbnails,
             videoFile: hlsManifestUrl,
             thumbnail: thumbnails[1] // Use the middle one (50% duration)
-        });
+        }, { new: true }).populate("owner", "username avatar");
 
         console.log(`Video processing completed successfully for: ${videoId}`);
+
+        // Sync with Typesense (fire and forget)
+        if (updatedVideo) {
+            indexVideo(updatedVideo).catch(err =>
+                console.error(`Failed to sync video ${videoId} to Typesense post-process:`, err.message)
+            );
+        }
 
         // Send real-time notification
         try {

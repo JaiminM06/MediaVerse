@@ -35,6 +35,10 @@ const videoSchema =new Schema(
             type: Schema.Types.ObjectId,
             ref:"User"
         },
+        tags: {
+            type: [String],
+            default: []
+        },
         processingStatus: {
             type: String,
             enum: ['uploading', 'processing', 'ready', 'failed'],

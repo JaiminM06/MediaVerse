@@ -1,10 +1,16 @@
 import mongoose, {isValidObjectId} from "mongoose"
 import {Video} from "../models/video.model.js"
 import {User} from "../models/user.model.js"
+import WatchHistory from "../models/watchHistory.model.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import { 
+    indexVideo as indexVideoSync, 
+    deleteVideo as deleteVideoSync, 
+    updateVideoViews as updateVideoViewsSync 
+} from "../services/typesenseSync.service.js"
 
 
 const getInfiniteHomeFeed = asyncHandler(async (req, res) => {
@@ -70,6 +76,13 @@ const publishAVideo = asyncHandler(async (req, res) => {
         throw new ApiError(500, "something went wrong while uploading video")
     }
 
+    // Sync with Typesense (fire and forget)
+    Video.findById(uploadedVideo._id).populate("owner", "username avatar")
+        .then(popVideo => {
+            if (popVideo) indexVideoSync(popVideo);
+        })
+        .catch(err => console.error("Typesense index error on publish:", err.message));
+
     return res.status(201).json(
         new ApiResponse(200, uploadedVideo, "video uploaded  successfully")
     )
@@ -93,6 +106,15 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Video not found")
     }
 
+    // Sync views to Typesense (fire and forget) if the video is ready and published
+    if (video.isPublished && video.processingStatus === "ready") {
+        try {
+            updateVideoViewsSync(videoId, video.views);
+        } catch (syncError) {
+            console.error("Typesense views sync error:", syncError.message);
+        }
+    }
+
     // Add to user watch history
     await User.findByIdAndUpdate(
         req.user._id,
@@ -103,6 +125,15 @@ const getVideoById = asyncHandler(async (req, res) => {
         }
     )
 
+    // Fire-and-forget record watch history in WatchHistory collection if authenticated
+    if (req.user?._id) {
+        WatchHistory.findOneAndUpdate(
+            { user: req.user._id, video: videoId },
+            { $set: { watchedAt: new Date() } },
+            { upsert: true }
+        ).catch(err => console.error("WatchHistory upsert error:", err.message));
+    }
+
     return res
         .status(200)
         .json(
@@ -112,31 +143,43 @@ const getVideoById = asyncHandler(async (req, res) => {
 
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    const {title,description}=req.body
-    const thumbnailLocalPath=req.file?.path
-    if (!thumbnailLocalPath) {
-        throw new ApiError(400, "thumbnail is required")
-    }
-    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+    const { title, description } = req.body
+    const thumbnailLocalPath = req.file?.path
 
-    if(!thumbnail){
-        throw new ApiError(400,"thumbnail is required")
+    const updateFields = {}
+    if (title) updateFields.title = title
+    if (description) updateFields.description = description
+
+    if (thumbnailLocalPath) {
+        const thumbnail = await uploadOnCloudinary(thumbnailLocalPath)
+        if (thumbnail) {
+            updateFields.thumbnail = thumbnail.url
+        } else {
+            throw new ApiError(500, "Failed to upload new thumbnail")
+        }
     }
-    if (!title || !description) {
-        throw new ApiError(400, "All fields are required")
+
+    if (Object.keys(updateFields).length === 0) {
+        throw new ApiError(400, "At least one field (title, description, or thumbnail) must be updated")
     }
+
     const video = await Video.findByIdAndUpdate(
         videoId,
         {
-            $set: {
-                title:title,
-                description:description,
-                thumbnail:thumbnail.url
-                
-            }
+            $set: updateFields
         },
         { new: true }
     )
+
+    // Sync with Typesense (fire and forget)
+    if (video) {
+        Video.findById(video._id).populate("owner", "username avatar")
+            .then(popVideo => {
+                if (popVideo) indexVideoSync(popVideo);
+            })
+            .catch(err => console.error("Typesense index error on update:", err.message));
+    }
+
     return res
         .status(200)
         .json(new ApiResponse(200, video, "Video details updated Successfully"))
@@ -148,6 +191,16 @@ const updateVideo = asyncHandler(async (req, res) => {
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     const delVideo=await Video.findByIdAndDelete(videoId)
+
+    // Sync with Typesense (fire and forget)
+    if (delVideo) {
+        try {
+            deleteVideoSync(videoId);
+        } catch (syncError) {
+            console.error("Typesense delete error:", syncError.message);
+        }
+    }
+
     return res
     .status(200)
     .json(new ApiResponse(200,delVideo,"Video deleted "))
@@ -165,11 +218,18 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     }
     await video.save({ validateBeforeSave: false })
 
+    // Sync status change with Typesense (fire and forget)
+    Video.findById(videoId).populate("owner", "username avatar")
+        .then(popVideo => {
+            if (popVideo) {
+                indexVideoSync(popVideo);
+            }
+        })
+        .catch(err => console.error("Typesense index error on toggle publish:", err.message));
+
     return res
     .status(200)
     .json(new ApiResponse(200, {}, "published is toggled Successfully"))
-
-
 })
 
 export {

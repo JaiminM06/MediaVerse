@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
+import jwt from "jsonwebtoken";
 import redisClient from "./redis.js";
 import { registerRoomHandlers } from "../services/room.service.js";
 
@@ -25,24 +26,37 @@ export const initSocket = (server) => {
         console.warn("Redis client not initialized, skipping Socket.IO Redis adapter.");
     }
 
-    io.on("connection", (socket) => {
-        let registeredUserId = null;
+    // JWT authentication middleware
+    io.use(async (socket, next) => {
+        try {
+            const token =
+                socket.handshake.auth?.token ||
+                socket.handshake.headers?.authorization?.replace("Bearer ", "");
 
-        socket.on("register", (userId) => {
-            if (userId) {
-                registeredUserId = String(userId);
-                onlineUsers.set(registeredUserId, socket.id);
-                console.log(`Socket registered: User ${registeredUserId} on socket ${socket.id}`);
-            }
-        });
+            if (!token) return next(new Error("Authentication required"));
+
+            const secret = process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET;
+            const decoded = jwt.verify(token, secret);
+            socket.userId = decoded._id;   // attach verified userId to socket
+            next();
+        } catch (err) {
+            next(new Error("Invalid or expired token"));
+        }
+    });
+
+    io.on("connection", (socket) => {
+        if (socket.userId) {
+            onlineUsers.set(socket.userId, socket.id);
+            console.log(`Socket connected: User ${socket.userId} on socket ${socket.id}`);
+        }
 
         // Register Video Room handlers
         registerRoomHandlers(socket, io);
 
         socket.on("disconnect", () => {
-            if (registeredUserId) {
-                onlineUsers.delete(registeredUserId);
-                console.log(`Socket disconnected: User ${registeredUserId}`);
+            if (socket.userId) {
+                onlineUsers.delete(socket.userId);
+                console.log(`Socket disconnected: User ${socket.userId}`);
             }
         });
     });

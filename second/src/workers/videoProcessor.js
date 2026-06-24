@@ -282,4 +282,23 @@ const videoProcessor = new Worker("video-processing", async (job) => {
     concurrency: 2
 });
 
+// Listener for failed jobs when all retry attempts are exhausted
+videoProcessor.on("failed", async (job, err) => {
+    if (job && job.attemptsMade >= (job.opts?.attempts || 1)) {
+        console.log(`Job ${job.id} for videoId: ${job.data?.videoId} failed permanently after ${job.attemptsMade} retries.`);
+        try {
+            await sendNotification({
+                recipientId: job.data.userId,
+                senderId: null,
+                type: "video_failed",
+                referenceId: job.data.videoId,
+                referenceModel: "Video",
+                message: "Your video could not be processed. Please try uploading again."
+            });
+        } catch (notifErr) {
+            console.error("Failed to send video processing failure notification:", notifErr);
+        }
+    }
+});
+
 export default videoProcessor;

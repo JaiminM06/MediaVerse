@@ -81,6 +81,9 @@ export const getCollaborativeRecommendations = async (videoId, limit = 10) => {
                 $match: { video: videoObjectId }
             },
             {
+                $limit: 50
+            },
+            {
                 $lookup: {
                     from: "watchhistories",
                     localField: "user",
@@ -89,6 +92,9 @@ export const getCollaborativeRecommendations = async (videoId, limit = 10) => {
                     pipeline: [
                         {
                             $match: { video: { $ne: videoObjectId } }
+                        },
+                        {
+                            $limit: 20
                         }
                     ]
                 }

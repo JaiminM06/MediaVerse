@@ -2,10 +2,14 @@ import mongoose, {isValidObjectId} from "mongoose"
 import {Video} from "../models/video.model.js"
 import {User} from "../models/user.model.js"
 import WatchHistory from "../models/watchHistory.model.js"
+import {Like} from "../models/like.model.js"
+import {Comment} from "../models/comment.model.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import {deleteS3Object} from "../utils/s3.js"
+import redisClient from "../config/redis.js"
 import { 
     indexVideo as indexVideoSync, 
     deleteVideo as deleteVideoSync, 
@@ -14,19 +18,25 @@ import {
 
 
 const getInfiniteHomeFeed = asyncHandler(async (req, res) => {
-    const videos = await Video.find()
-        .sort({ createdAt: -1 })   
-        .populate("owner", "username")
+    const page = parseInt(req.query.page) || 1
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50)
+    const skip = (page - 1) * limit
+
+    const videos = await Video.find({ isPublished: true })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("owner", "username avatar")
+
+    const total = await Video.countDocuments({ isPublished: true })
 
     return res
         .status(200)
-        .json(new ApiResponse(200, videos, "videos fetched Successfully"))
+        .json(new ApiResponse(200, { videos, total, page, limit }, "videos fetched Successfully"))
 })
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    // const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    //TODO: get all videos based on query, sort, pagination
     const videos= await Video.find(
         {
             owner:req.user._id
@@ -86,7 +96,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
     return res.status(201).json(
         new ApiResponse(200, uploadedVideo, "video uploaded  successfully")
     )
-    // TODO: get video, upload to cloudinary, create video
 })
 
 const getVideoById = asyncHandler(async (req, res) => {
@@ -95,35 +104,48 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(400,"videoId is missing")
     }
 
-    // Increment video views
-    const video = await Video.findByIdAndUpdate(
-        videoId,
-        { $inc: { views: 1 } },
-        { new: true }
-    ).populate("owner", "username")
+    let video = await Video.findById(videoId).populate("owner", "username avatar")
 
     if (!video) {
         throw new ApiError(404, "Video not found")
     }
 
-    // Sync views to Typesense (fire and forget) if the video is ready and published
-    if (video.isPublished && video.processingStatus === "ready") {
-        try {
-            updateVideoViewsSync(videoId, video.views);
-        } catch (syncError) {
-            console.error("Typesense views sync error:", syncError.message);
+    const ownerId = video.owner?._id || video.owner
+    const isOwner = req.user?._id && ownerId && ownerId.toString() === req.user._id.toString()
+
+    if (!isOwner) {
+        const viewKey = `view:${videoId}:${req.user?._id || req.ip}`
+        const alreadyViewed = await redisClient.get(viewKey)
+        if (!alreadyViewed) {
+            // Increment video views
+            video = await Video.findByIdAndUpdate(
+                videoId,
+                { $inc: { views: 1 } },
+                { new: true }
+            ).populate("owner", "username avatar")
+
+            await redisClient.setex(viewKey, 1800, '1') // 30 min TTL
+
+            // Sync views to Typesense (fire and forget) if the video is ready and published
+            if (video.isPublished && video.processingStatus === "ready") {
+                updateVideoViewsSync(videoId, video.views).catch(err =>
+                    console.error("Typesense view sync failed:", err.message)
+                )
+            }
         }
     }
 
     // Add to user watch history
-    await User.findByIdAndUpdate(
-        req.user._id,
-        {
-            $addToSet: {
-                watchHistory: videoId
+    if (req.user?._id) {
+        await User.findByIdAndUpdate(
+            req.user._id,
+            {
+                $addToSet: {
+                    watchHistory: videoId
+                }
             }
-        }
-    )
+        )
+    }
 
     // Fire-and-forget record watch history in WatchHistory collection if authenticated
     if (req.user?._id) {
@@ -145,6 +167,14 @@ const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     const { title, description } = req.body
     const thumbnailLocalPath = req.file?.path
+
+    const videoObj = await Video.findById(videoId)
+    if (!videoObj) {
+        throw new ApiError(404, "Video not found")
+    }
+    if (videoObj.owner.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "You are not authorized to update this video")
+    }
 
     const updateFields = {}
     if (title) updateFields.title = title
@@ -184,13 +214,20 @@ const updateVideo = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, video, "Video details updated Successfully"))
 
-    //TODO: update video details like title, description, thumbnail
-
 })
 
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    const delVideo=await Video.findByIdAndDelete(videoId)
+
+    const video = await Video.findById(videoId)
+    if (!video) {
+        throw new ApiError(404, "Video not found")
+    }
+    if (video.owner.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "You are not authorized to delete this video")
+    }
+
+    const delVideo = await Video.findByIdAndDelete(videoId)
 
     // Sync with Typesense (fire and forget)
     if (delVideo) {
@@ -201,15 +238,24 @@ const deleteVideo = asyncHandler(async (req, res) => {
         }
     }
 
+    // Clean up S3 (do not await)
+    if (video.rawFileKey) deleteS3Object(process.env.AWS_S3_RAW_BUCKET, video.rawFileKey).catch(console.error)
+    if (video.hlsManifestUrl) deleteS3Object(process.env.AWS_S3_PROCESSED_BUCKET, `videos/${videoId}`).catch(console.error)
+
+    // Clean up orphaned documents (do not await)
+    Like.deleteMany({ video: videoId }).catch(console.error)
+    Comment.deleteMany({ video: videoId }).catch(console.error)
+    WatchHistory.deleteMany({ video: videoId }).catch(console.error)
+
     return res
     .status(200)
     .json(new ApiResponse(200,delVideo,"Video deleted "))
-    //TODO: delete video
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     const video= await Video.findById(videoId)
+    if (!video) throw new ApiError(404, "Video not found")
     if(video.isPublished===true){
         video.isPublished=false
     }

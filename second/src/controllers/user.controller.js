@@ -106,7 +106,7 @@ const loginUser = asyncHandler(async (req, res) => {
     const options = {
         // if we do  httpsOnly and secure the cookie can only be modified by the server and not by the frontend
         httpOnly: true,
-        secure: false,
+        secure: process.env.NODE_ENV === "production",
         sameSite:"Lax"
     }
 
@@ -141,7 +141,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     const options = {
         // if we do  httpsOnly and secure the cookie can only be modified by the server and not by the frontend
         httpOnly: true,
-        secure: false,
+        secure: process.env.NODE_ENV === "production",
         sameSite: "Lax",
     }
 
@@ -171,7 +171,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
         const options = {
             httpOnly: true,
-            secure: false
+            secure: process.env.NODE_ENV === "production"
         }
         
         const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id)
@@ -188,7 +188,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
                 )
             )
     } catch (error) {
-        throw new ApiError(401, error)
+        throw new ApiError(401, error?.message || "Invalid refresh token")
     }
 })
 
@@ -209,7 +209,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 })
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-    const user= await User.findById(req.user._id)
+    const user = await User.findById(req.user._id).select("-password -refreshToken")
     return res
         .status(200)
         .json(new ApiResponse(200, user, "current user fetched successfully"))
@@ -405,7 +405,7 @@ const getWatchHistory = asyncHandler(async(req,res)=>{
 
 const getUserById =asyncHandler(async(req,res)=>{
         const {userid}=req.params
-        const user= await User.findById(userid)
+        const user = await User.findById(userid).select("-password -refreshToken")
         return res
         .status(200)
         .json(new ApiResponse(200, user, "User fetched successfully"))

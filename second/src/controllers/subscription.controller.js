@@ -6,7 +6,7 @@ import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import { sendNotification } from "../services/notification.service.js"
 
-const subscriptionStatus = async (req, res) => {
+const subscriptionStatus = asyncHandler(async (req, res) => {
     const {channelId} = req.params      
 
     if(!isValidObjectId(channelId)){
@@ -21,7 +21,8 @@ const subscriptionStatus = async (req, res) => {
     return res
     .status(200)
     .json(new ApiResponse(200,{isSubscribed: !!isSubscribed},"Subscription status fetched successfully"))
-}
+})
+
 const toggleSubscription = asyncHandler(async (req, res) => {
     const {channelId} = req.params
     // TODO: toggle subscription

@@ -14,7 +14,7 @@ const notificationSchema = new Schema(
     },
     type: {
       type: String,
-      enum: ["new_subscriber", "new_comment", "new_like", "video_ready", "mention"],
+      enum: ["new_subscriber", "new_comment", "new_like", "video_ready", "video_failed", "mention"],
       required: true
     },
     referenceId: { 

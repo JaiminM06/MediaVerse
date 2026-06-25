@@ -17,6 +17,7 @@ import {
   Cell
 } from "recharts";
 import { Eye, Clock, Users, Video, AlertCircle, Loader2 } from "lucide-react";
+import { PIE_COLORS } from "../../constants/chartColors.js";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -42,14 +43,13 @@ export default function Dashboard() {
   const [subError, setSubError] = useState("");
 
   const [trafficSources, setTrafficSources] = useState([]);
+  const [trafficVideoTitle, setTrafficVideoTitle] = useState("");
   const [trafficLoading, setTrafficLoading] = useState(true);
   const [trafficError, setTrafficError] = useState("");
 
   const [topVideos, setTopVideos] = useState([]);
   const [topVideosLoading, setTopVideosLoading] = useState(true);
   const [topVideosError, setTopVideosError] = useState("");
-
-  const PIE_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444"];
 
   // Fetch summary stats
   useEffect(() => {
@@ -133,12 +133,14 @@ export default function Dashboard() {
 
         const bestVideo = videosList[0];
         if (bestVideo) {
+          setTrafficVideoTitle(bestVideo.title || "Top video");
           const retRes = await axios.get(
             `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/v1/analytics/retention/${bestVideo._id}`,
             { withCredentials: true }
           );
           setTrafficSources(retRes.data.data?.trafficSources || []);
         } else {
+          setTrafficVideoTitle("");
           setTrafficSources([]);
         }
       } catch (err) {
@@ -157,6 +159,15 @@ export default function Dashboard() {
     if (!tick) return "";
     const parts = tick.split("-");
     return parts.length === 3 ? `${parts[1]}/${parts[2]}` : tick;
+  };
+
+  const periodLabel = (period) => {
+    switch (period) {
+      case "week": return "Last 7 days";
+      case "month": return "Last 30 days";
+      case "year": return "Last 365 days";
+      default: return "";
+    }
   };
 
   return (
@@ -261,7 +272,7 @@ export default function Dashboard() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Views Over Time</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Audience watch patterns and visual counts</p>
+            <p className="text-xs text-slate-500 mt-0.5">Audience watch patterns and visual counts • {periodLabel(viewsPeriod)}</p>
           </div>
           {/* Period Toggles */}
           <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
@@ -353,7 +364,7 @@ export default function Dashboard() {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h2 className="text-lg font-bold text-slate-900">Subscriber Growth</h2>
-              <p className="text-xs text-slate-500 mt-0.5">New channels subscribers count</p>
+              <p className="text-xs text-slate-500 mt-0.5">New channels subscribers count • {periodLabel(subPeriod)}</p>
             </div>
             <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
               {["week", "month", "year"].map((p) => (
@@ -412,9 +423,14 @@ export default function Dashboard() {
 
         {/* Right: Traffic Sources */}
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-          <div>
+          <div className="mb-4">
             <h2 className="text-lg font-bold text-slate-900">Traffic Sources</h2>
             <p className="text-xs text-slate-500 mt-0.5">Top-performing video redirection channels</p>
+            {trafficVideoTitle && (
+              <p className="text-xs text-slate-700 mt-1.5 font-medium truncate" title={trafficVideoTitle}>
+                Source: {trafficVideoTitle}
+              </p>
+            )}
           </div>
 
           {trafficLoading ? (
@@ -506,7 +522,7 @@ export default function Dashboard() {
                 {topVideos.map((video) => (
                   <tr
                     key={video._id}
-                    onClick={() => navigate(`/dashboard/video/${video._id}`)}
+                    onClick={() => navigate(`/Home/dashboard/video/${video._id}`)}
                     className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
                   >
                     {/* Thumbnail & Title */}
@@ -532,7 +548,7 @@ export default function Dashboard() {
                     <td className="px-6 py-4 text-right">
                       <span className="px-2.5 py-1 bg-blue-50 text-blue-700 font-semibold rounded-full text-xs">
                         {video.avgCompletionRate
-                          ? `${(video.avgCompletionRate * 100).toFixed(0)}%`
+                          ? `${(video.avgCompletionRate * 100).toFixed(1)}%`
                           : "0%"}
                       </span>
                     </td>

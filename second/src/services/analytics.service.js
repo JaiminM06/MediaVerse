@@ -86,42 +86,58 @@ const getTopVideos = async (videoIds, limit = 10) => {
     {
       $lookup: {
         from: 'videoanalytics',
-        localField: '_id',
-        foreignField: 'video',
+        let: { videoId: '$_id' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$video', '$$videoId'] } } },
+          {
+            $group: {
+              _id: null,
+              totalViews: { $sum: 1 },
+              avgCompletionRate: { $avg: '$completionRate' },
+              avgWatchDuration: { $avg: '$watchDuration' }
+            }
+          }
+        ],
         as: 'analytics'
       }
     },
     {
       $addFields: {
-        totalViews: { $size: '$analytics' },
-        avgCompletionRate: { $avg: '$analytics.completionRate' },
-        avgWatchDuration: { $avg: '$analytics.watchDuration' }
+        totalViews: { $arrayElemAt: ['$analytics.totalViews', 0] },
+        avgCompletionRate: { $arrayElemAt: ['$analytics.avgCompletionRate', 0] },
+        avgWatchDuration: { $arrayElemAt: ['$analytics.avgWatchDuration', 0] }
       }
     },
     {
       $lookup: {
         from: 'likes',
-        localField: '_id',
-        foreignField: 'video',
+        let: { videoId: '$_id' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$video', '$$videoId'] } } },
+          { $count: 'count' }
+        ],
         as: 'likes'
       }
     },
     {
       $addFields: {
-        likeCount: { $size: '$likes' }
+        likeCount: { $arrayElemAt: ['$likes.count', 0] }
       }
     },
     {
       $lookup: {
         from: 'comments',
-        localField: '_id',
-        foreignField: 'video',
+        let: { videoId: '$_id' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$video', '$$videoId'] } } },
+          { $count: 'count' }
+        ],
         as: 'comments'
       }
     },
     {
       $addFields: {
-        commentCount: { $size: '$comments' }
+        commentCount: { $arrayElemAt: ['$comments.count', 0] }
       }
     },
     {
@@ -191,6 +207,7 @@ const getAudienceRetention = async (videoId) => {
     },
     {
       $project: {
+        _id: 0,
         avgCompletionRate: 1,
         avgWatchDuration: 1,
         totalViews: 1,

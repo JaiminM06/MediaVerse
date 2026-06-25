@@ -22,6 +22,12 @@ const recordWatchEvent = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid or missing video ID");
   }
 
+  // Verify video exists
+  const videoExists = await Video.exists({ _id: videoId });
+  if (!videoExists) {
+    throw new ApiError(404, "Video not found");
+  }
+
   // Validate watchDuration
   if (watchDuration === undefined || typeof watchDuration !== "number" || watchDuration < 0) {
     throw new ApiError(400, "watchDuration is required and must be a number greater than or equal to 0");

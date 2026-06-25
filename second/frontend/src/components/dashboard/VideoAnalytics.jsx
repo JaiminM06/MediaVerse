@@ -9,6 +9,7 @@ import {
   Tooltip
 } from "recharts";
 import { Eye, Clock, Award, CheckCircle, AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
+import { PIE_COLORS } from "../../constants/chartColors.js";
 
 export default function VideoAnalytics() {
   const { videoId } = useParams();
@@ -23,8 +24,6 @@ export default function VideoAnalytics() {
   const [trafficSources, setTrafficSources] = useState([]);
   const [retentionLoading, setRetentionLoading] = useState(true);
   const [retentionError, setRetentionError] = useState("");
-
-  const PIE_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444"];
 
   // Fetch video details
   useEffect(() => {

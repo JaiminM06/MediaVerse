@@ -1,13 +1,26 @@
 import { useState, useEffect } from "react";
-import { Menu, Search, Bell, User, Home, Upload, Flame, Tv, Library, X, LogOut, Settings, Twitter } from "lucide-react";
+import { Menu, Search, User, Home, Upload, Flame, Tv, Library, X, LogOut, Settings, Twitter } from "lucide-react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import axios from "axios";
+import useSocket from "./src/hooks/useSocket.js";
+import NotificationBell from "./src/components/Notifications/NotificationBell.jsx";
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile toggle
   const [isExpanded, setIsExpanded] = useState(true); // Desktop collapse state
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
+
+  // Helper to read accessToken from cookies (if not httpOnly)
+  const getCookie = (name) => {
+    const matches = document.cookie.match(new RegExp(
+      "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+    ));
+    return matches ? decodeURIComponent(matches[1]) : undefined;
+  };
+
+  const accessToken = getCookie("accessToken") || "";
+  const socket = useSocket(accessToken);
 
   const toggleSidebar = () => {
     if (window.innerWidth < 768) {
@@ -173,10 +186,9 @@ export default function Layout() {
               <Twitter size={16} className="md:w-4 md:h-4 shrink-0" />
               <span className="text-xs md:text-sm font-semibold whitespace-nowrap hidden sm:inline-block">Switch to Twitter</span>
             </button>
-            <button className="p-2.5 rounded-full hover:bg-slate-100 text-slate-600 relative group transition-colors">
-              <Bell size={20} className="group-hover:text-slate-900" />
-              <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
+            
+            {/* Real-time Notification Bell */}
+            {user && <NotificationBell socket={socket} />}
 
             {user ? (
               <button
@@ -209,4 +221,3 @@ export default function Layout() {
     </div>
   );
 }
-

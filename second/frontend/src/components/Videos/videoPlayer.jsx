@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
-import { ThumbsUp, ThumbsDown, Share2, Bookmark, Flag, Send, User, MessageCircle } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Share2, Bookmark, User, MessageCircle } from "lucide-react";
 import Hls from "hls.js";
 
 export default function VideoPlayer() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
@@ -16,10 +17,21 @@ export default function VideoPlayer() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const videoRef = useRef(null);
 
+  const currentTimeRef = useRef(0);
+  const durationRef = useRef(0);
+  const hasEndedRef = useRef(false);
+  const sourceRef = useRef("direct");
+
   // QUALITY SELECTION STATE
   const [levels, setLevels] = useState([]);
   const [currentQuality, setCurrentQuality] = useState("Auto");
   const [hlsInstance, setHlsInstance] = useState(null);
+
+  useEffect(() => {
+    const validSources = ['direct', 'search', 'recommended', 'external'];
+    const urlSource = searchParams.get('source');
+    sourceRef.current = validSources.includes(urlSource) ? urlSource : 'direct';
+  }, [searchParams]);
 
   // Setup Hls.js playback for M3U8 adaptive streams
   useEffect(() => {
@@ -76,10 +88,12 @@ export default function VideoPlayer() {
   // COMMENTS STATE
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
-  const [replyText, setReplyText] = useState("");
-  const [replyTo, setReplyTo] = useState(null);
 
   useEffect(() => {
+    currentTimeRef.current = 0;
+    durationRef.current = 0;
+    hasEndedRef.current = false;
+
     const fetchVideo = async () => {
       try {
         const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/videos/${id}`, {
@@ -129,7 +143,7 @@ export default function VideoPlayer() {
       }
     };
     fetchData();
-  }, [video]);
+  }, [video?._id]);
 
   useEffect(() => {
     if (!id) return;
@@ -147,14 +161,35 @@ export default function VideoPlayer() {
     fetchComments();
   }, [id]);
 
-  const handleLike = () => {
-    setLiked(!liked);
-    if (disliked) setDisliked(false);
+  const handleLike = async () => {
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/likes/toggle/v/${id}`,
+        {},
+        { withCredentials: true }
+      );
+      setLiked(prev => !prev);
+      if (disliked) setDisliked(false);
+    } catch (err) {
+      console.error('Error toggling like:', err);
+    }
   };
 
-  const handleDislike = () => {
-    setDisliked(!disliked);
-    if (liked) setLiked(false);
+  const handleDislike = async () => {
+    try {
+      // backend has no dislike — just remove like if liked
+      if (liked) {
+        await axios.post(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/likes/toggle/v/${id}`,
+          {},
+          { withCredentials: true }
+        );
+        setLiked(false);
+      }
+      setDisliked(prev => !prev);
+    } catch (err) {
+      console.error('Error toggling dislike:', err);
+    }
   };
 
   const handleSubscribe = async () => {
@@ -188,30 +223,50 @@ export default function VideoPlayer() {
     }
   };
 
-  const handleReply = async (commentId) => {
-    if (!replyText.trim()) return;
+  const handleEnded = () => {
+    if (hasEndedRef.current) return;
+    hasEndedRef.current = true;
 
-    try {
-      const res = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/comments/${commentId}/reply`,
-        { text: replyText },
-        { withCredentials: true }
-      );
+    const watchDuration = Math.floor(currentTimeRef.current);
+    const totalDuration = Math.floor(durationRef.current);
 
-      setComments(prev =>
-        prev.map(c =>
-          c._id === commentId
-            ? { ...c, replies: [...(c.replies || []), res.data.data] }
-            : c
-        )
-      );
+    if (totalDuration <= 0) return;
 
-      setReplyText("");
-      setReplyTo(null);
-    } catch (error) {
-      console.error("Error replying to comment:", error);
-    }
+    axios.post(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/analytics/watch-event`,
+      {
+        videoId: id,
+        watchDuration,
+        totalDuration,
+        source: sourceRef.current,
+        deviceType: /Mobi/.test(navigator.userAgent) ? 'mobile' : 'desktop'
+      },
+      { withCredentials: true }
+    ).catch(err => console.error("Failed to record watch event:", err));
   };
+
+  useEffect(() => {
+    return () => {
+      if (hasEndedRef.current) return;
+
+      const watchDuration = Math.floor(currentTimeRef.current);
+      const totalDuration = Math.floor(durationRef.current);
+
+      if (totalDuration <= 0) return;
+
+      axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/analytics/watch-event`,
+        {
+          videoId: id,
+          watchDuration,
+          totalDuration,
+          source: sourceRef.current,
+          deviceType: /Mobi/.test(navigator.userAgent) ? 'mobile' : 'desktop'
+        },
+        { withCredentials: true }
+      ).catch(err => console.error("Failed to record unmount watch event:", err));
+    };
+  }, [id]);
 
   if (loading) return (
     <div className="flex items-center justify-center p-20">
@@ -232,6 +287,9 @@ export default function VideoPlayer() {
             ref={videoRef}
             poster={video.thumbnail}
             controls
+            onEnded={handleEnded}
+            onTimeUpdate={(e) => { currentTimeRef.current = e.target.currentTime; }}
+            onLoadedMetadata={(e) => { durationRef.current = e.target.duration; }}
             className="w-full h-full object-contain"
           />
         </div>
@@ -335,7 +393,7 @@ export default function VideoPlayer() {
         </div>
       </div>
 
-      {/* Sidebar: Comments (Desktop) or Recommended Videos */}
+      {/* Sidebar: Comments (Desktop) */}
       <div className="space-y-6">
         {/* Comment Section Header */}
         <div className="flex items-center gap-2 mb-4">
@@ -384,7 +442,13 @@ export default function VideoPlayer() {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-sm text-slate-900">{comment.owner?.username}</span>
-                  <span className="text-xs text-slate-500">2 hours ago</span>
+                  <span className="text-xs text-slate-500">
+                    {comment.createdAt
+                      ? new Date(comment.createdAt).toLocaleDateString('en-US', {
+                          month: 'short', day: 'numeric', year: 'numeric'
+                        })
+                      : ''}
+                  </span>
                 </div>
                 <p className="text-sm text-slate-800 mt-1">{comment.content}</p>
 
@@ -395,46 +459,7 @@ export default function VideoPlayer() {
                   <button className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900">
                     <ThumbsDown size={14} />
                   </button>
-                  <button onClick={() => setReplyTo(replyTo === comment._id ? null : comment._id)} className="text-xs font-medium text-slate-600 hover:bg-slate-100 px-2 py-1 rounded-full">
-                    Reply
-                  </button>
                 </div>
-
-                {/* Reply Input */}
-                {replyTo === comment._id && (
-                  <div className="mt-3 flex gap-2 animate-fadeIn">
-                    <input
-                      type="text"
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      placeholder="Add a reply..."
-                      className="flex-1 text-sm border-b border-slate-300 focus:border-slate-800 outline-none pb-1 bg-transparent"
-                      autoFocus
-                    />
-                    <button onClick={() => handleReply(comment._id)} className="text-brand-600 hover:bg-brand-50 p-1 rounded">
-                      <Send size={16} />
-                    </button>
-                  </div>
-                )}
-
-                {/* Replies List */}
-                {comment.replies?.length > 0 && (
-                  <div className="mt-3 space-y-3 pl-3 border-l-2 border-slate-100">
-                    {comment.replies.map((reply) => (
-                      <div key={reply._id} className="flex gap-2">
-                        <div className="w-6 h-6 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center text-xs">
-                          <User size={12} className="text-slate-500" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-xs text-slate-900">{reply.user?.username}</span>
-                          </div>
-                          <p className="text-sm text-slate-800">{reply.text}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           ))}

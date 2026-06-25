@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Upload from "./upload.jsx"
 import UpdateVideo from "./UpdateVideo.jsx";
@@ -9,6 +10,7 @@ function ManageVideos() {
     const [videos, setVideos] = useState([]);
     const [selectedVideo, setSelectedVideo] = useState(null);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchVideos = async () => {
@@ -50,7 +52,7 @@ function ManageVideos() {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                     <div>
                         <button
-                            onClick={() => (window.location.href = "/Home/user")}
+                            onClick={() => navigate("/Home/user")}
                             className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors mb-2 font-medium"
                         >
                             <ArrowLeft size={20} /> Back to Dashboard

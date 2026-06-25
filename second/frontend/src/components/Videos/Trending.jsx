@@ -1,24 +1,23 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Flame, Play, Clock, MoreVertical, Loader2 } from "lucide-react";
+import { Flame, MoreVertical, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 function Trending() {
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [period, setPeriod] = useState('week');
     const navigate = useNavigate();
 
     useEffect(() => {
         const fetchTrending = async () => {
             try {
-                // Fetch videos and sort by views locally since we might not have a dedicated trending endpoint
-                const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/videos/`, {
-                    withCredentials: true,
-                });
-                const allVideos = res.data.data || [];
-                // Sort by views descending
-                const sorted = allVideos.sort((a, b) => (b.views || 0) - (a.views || 0));
-                setVideos(sorted);
+                setLoading(true);
+                const res = await axios.get(
+                    `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/trending/videos?period=${period}`,
+                    { withCredentials: true }
+                );
+                setVideos(res.data.data?.trending || []);
             } catch (error) {
                 console.error("Error fetching trending videos:", error);
             } finally {
@@ -26,7 +25,7 @@ function Trending() {
             }
         };
         fetchTrending();
-    }, []);
+    }, [period]);
 
     if (loading) return (
         <div className="flex justify-center p-20">
@@ -39,7 +38,7 @@ function Trending() {
             <div className="max-w-6xl mx-auto">
 
                 {/* Header */}
-                <div className="flex items-center gap-4 mb-8">
+                <div className="flex items-center gap-4 mb-6">
                     <div className="w-16 h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
                         <Flame size={32} fill="currentColor" />
                     </div>
@@ -47,6 +46,20 @@ function Trending() {
                         <h1 className="text-3xl font-bold text-slate-900">Trending Now</h1>
                         <p className="text-slate-500">Most watched videos today</p>
                     </div>
+                </div>
+
+                {/* Period Toggles */}
+                <div className="flex gap-2 mb-8">
+                    {['day', 'week', 'month'].map(p => (
+                        <button
+                            key={p}
+                            onClick={() => setPeriod(p)}
+                            className={`px-4 py-1.5 rounded-full text-sm font-semibold capitalize transition-all
+                                ${period === p ? 'bg-red-600 text-white shadow-sm' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
+                        >
+                            {p}
+                        </button>
+                    ))}
                 </div>
 
                 {/* Video List */}
@@ -57,7 +70,7 @@ function Trending() {
                             className="group bg-white rounded-2xl p-4 flex flex-col sm:flex-row gap-4 hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200 cursor-pointer"
                             onClick={() => navigate(`/Home/${video._id}`)}
                         >
-                            {/* Rank Number (optional styling) */}
+                            {/* Rank Number */}
                             <div className="hidden md:flex items-center justify-center w-8 text-2xl font-bold text-slate-300 group-hover:text-brand-600 transition-colors">
                                 {index + 1}
                             </div>
@@ -71,8 +84,9 @@ function Trending() {
                                 />
                                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
                                 <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded font-medium">
-                                    {/* Duration placeholder */}
-                                    {Math.floor(Math.random() * 20) + 1}:{(Math.floor(Math.random() * 60)).toString().padStart(2, '0')}
+                                    {video.duration
+                                        ? `${Math.floor(video.duration / 60)}:${Math.floor(video.duration % 60).toString().padStart(2, '0')}`
+                                        : "—"}
                                 </div>
                             </div>
 
@@ -95,7 +109,7 @@ function Trending() {
                                 </p>
                             </div>
 
-                            {/* Action (optional) */}
+                            {/* Action */}
                             <button className="self-start sm:self-center p-2 text-slate-400 hover:text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <MoreVertical size={20} />
                             </button>

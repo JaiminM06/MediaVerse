@@ -6,6 +6,7 @@ import { Play } from "lucide-react";
 export default function Feed() {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 20 });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,7 +17,12 @@ export default function Feed() {
           `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/videos/feed`,
           { withCredentials: true }
         );
-        setVideos(videosRes.data.data || []);
+        setVideos(videosRes.data.data?.videos || []);
+        setPagination({
+          total: videosRes.data.data?.total || 0,
+          page: videosRes.data.data?.page || 1,
+          limit: videosRes.data.data?.limit || 20
+        });
       } catch (err) {
         console.error("Error loading videos:", err);
       } finally {
@@ -26,6 +32,24 @@ export default function Feed() {
 
     fetchVideos();
   }, []);
+
+  const loadMore = async () => {
+    try {
+      const nextPage = pagination.page + 1;
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/videos/feed?page=${nextPage}&limit=${pagination.limit}`,
+        { withCredentials: true }
+      );
+      setVideos(prev => [...prev, ...(res.data.data?.videos || [])]);
+      setPagination(prev => ({
+        ...prev,
+        page: nextPage,
+        total: res.data.data?.total || prev.total
+      }));
+    } catch (err) {
+      console.error("Error loading more videos:", err);
+    }
+  };
 
   if (loading) {
     return (
@@ -42,69 +66,85 @@ export default function Feed() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {videos.map((video, index) => (
-        <div
-          key={video._id}
-          className="group cursor-pointer flex flex-col gap-3"
-          onClick={() => navigate(`/Home/${video._id}`)}
-        >
-          {/* Thumbnail Container */}
-          <div className="relative rounded-xl overflow-hidden aspect-video bg-slate-900 shadow-sm group-hover:shadow-md transition-all duration-300">
-            <img
-              src={video.thumbnail}
-              alt={video.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-              <div className="bg-black/30 backdrop-blur-sm p-3 rounded-full">
-                <Play size={24} className="text-white fill-white" />
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {videos.length === 0 ? (
+          <div className="col-span-full text-center text-slate-400 py-20">
+            No videos yet. Be the first to upload!
+          </div>
+        ) : (
+          videos.map((video, index) => (
+            <div
+              key={video._id}
+              className="group cursor-pointer flex flex-col gap-3"
+              onClick={() => navigate(`/Home/${video._id}`)}
+            >
+              {/* Thumbnail Container */}
+              <div className="relative rounded-xl overflow-hidden aspect-video bg-slate-900 shadow-sm group-hover:shadow-md transition-all duration-300">
+                <img
+                  src={video.thumbnail}
+                  alt={video.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  <div className="bg-black/30 backdrop-blur-sm p-3 rounded-full">
+                    <Play size={24} className="text-white fill-white" />
+                  </div>
+                </div>
+                {/* Duration Badge */}
+                <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-md text-white text-xs font-medium px-1.5 py-0.5 rounded">
+                  {
+                    video.duration
+                      ? `${Math.floor(video.duration / 60)}:${Math.floor(video.duration % 60)
+                        .toString()
+                        .padStart(2, '0')}`
+                      : `${(index % 10) + 5}:${((index * 3) % 60)
+                        .toString()
+                        .padStart(2, '0')}`
+                  }
+                </div>
+              </div>
+
+              {/* Video Info */}
+              <div className="flex gap-3 px-1">
+                {/* Avatar */}
+                <div className="flex-shrink-0">
+                  <img
+                    src={video.owner?.avatar || `https://ui-avatars.com/api/?name=${video.owner?.username}&background=random`}
+                    alt="Avatar"
+                    className="w-9 h-9 rounded-full object-cover border border-white shadow-sm"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <h3 className="font-bold text-slate-900 leading-tight line-clamp-2 group-hover:text-brand-600 transition-colors">
+                    {video.title}
+                  </h3>
+                  <p className="text-slate-500 text-sm mt-1 hover:text-slate-700 w-fit">
+                    {video.owner?.username || "Unknown Channel"}
+                  </p>
+                  <div className="text-slate-500 text-xs mt-0.5 flex items-center gap-1">
+                    <span>{video.views} views</span>
+                    <span>•</span>
+                    <span>{new Date(video.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
               </div>
             </div>
-            {/* Duration Badge */}
-            <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-md text-white text-xs font-medium px-1.5 py-0.5 rounded">
-              {/* Generate consistent duration based on video ID length or index */}
-              {
-                video.duration
-                  ? `${Math.floor(video.duration / 60)}:${Math.floor(video.duration % 60)
-                    .toString()
-                    .padStart(2, '0')}`
-                  : `${(index % 10) + 5}:${((index * 3) % 60)
-                    .toString()
-                    .padStart(2, '0')}`
-              }
-            </div>
-          </div>
+          ))
+        )}
+      </div>
 
-          {/* Video Info */}
-          <div className="flex gap-3 px-1">
-            {/* Avatar */}
-            <div className="flex-shrink-0">
-              <img
-                src={video.owner?.avatar || `https://ui-avatars.com/api/?name=${video.owner?.username}&background=random`}
-                alt="Avatar"
-                className="w-9 h-9 rounded-full object-cover border border-white shadow-sm"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <h3 className="font-bold text-slate-900 leading-tight line-clamp-2 group-hover:text-brand-600 transition-colors">
-                {video.title}
-              </h3>
-              <p className="text-slate-500 text-sm mt-1 hover:text-slate-700 w-fit">
-                {video.owner?.username || "Unknown Channel"}
-              </p>
-              <div className="text-slate-500 text-xs mt-0.5 flex items-center gap-1">
-                <span>{video.views} views</span>
-                <span>•</span>
-                <span>{new Date(video.createdAt).toLocaleDateString()}</span>
-              </div>
-            </div>
-          </div>
+      {videos.length < pagination.total && (
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={loadMore}
+            className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+          >
+            Load More
+          </button>
         </div>
-      ))}
-    </div>
+      )}
+    </>
   );
 }
-
-

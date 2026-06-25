@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { Upload, CloudUpload, Film, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 
@@ -11,6 +11,13 @@ export default function VideoUpload() {
   const [processingStatus, setProcessingStatus] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const pollRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -57,7 +64,7 @@ export default function VideoUpload() {
       // 2. Upload raw video file directly to AWS S3 via PUT
       await axios.put(uploadUrl, videoFile, {
         headers: {
-          "Content-Type": videoFile.type
+          "Content-Type": contentType || "video/mp4"
         },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round(
@@ -80,7 +87,7 @@ export default function VideoUpload() {
       setProcessingStatus("Transcoding & generating HLS manifests (360p, 480p, 720p, 1080p)...");
 
       // 4. Poll status until ready or failed
-      const pollInterval = setInterval(async () => {
+      pollRef.current = setInterval(async () => {
         try {
           const statusRes = await axios.get(
             `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/upload/status/${videoId}`,
@@ -89,7 +96,7 @@ export default function VideoUpload() {
           
           const status = statusRes.data.data.processingStatus;
           if (status === "ready") {
-            clearInterval(pollInterval);
+            clearInterval(pollRef.current);
             setProcessingStatus("Ready");
             setMessage("Video uploaded, processed, and ready for adaptive streaming!");
             setUploading(false);
@@ -99,13 +106,13 @@ export default function VideoUpload() {
             setVideoFile(null);
             setUploadProgress(0);
           } else if (status === "failed") {
-            clearInterval(pollInterval);
+            clearInterval(pollRef.current);
             setProcessingStatus("Failed");
             setError(statusRes.data.data.processingError || "Transcoding failed.");
             setUploading(false);
           }
         } catch (pollErr) {
-          clearInterval(pollInterval);
+          clearInterval(pollRef.current);
           console.error("Polling error:", pollErr);
           setError("Failed to track video status, but processing is running.");
           setUploading(false);

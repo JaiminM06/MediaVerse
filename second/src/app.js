@@ -28,6 +28,7 @@ import notificationRouter from './routes/notification.routes.js'
 import searchRouter from './routes/search.routes.js'
 import recommendationRouter from './routes/recommendation.routes.js'
 import trendingRouter from './routes/trending.routes.js'
+import analyticsRouter from './routes/analytics.routes.js'
 
 // Route declarations
 app.use("/api/v1/users", userRouter)
@@ -43,6 +44,7 @@ app.use("/api/v1/notifications", notificationRouter)
 app.use("/api/v1/search", searchRouter)
 app.use("/api/v1", recommendationRouter)
 app.use("/api/v1", trendingRouter)
+app.use("/api/v1/analytics", analyticsRouter)
 
 // Global error handler
 import { ApiError } from "./utils/ApiError.js";

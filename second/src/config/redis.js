@@ -1,4 +1,5 @@
 import Redis from "ioredis";
+import { logger } from "../utils/logger.js";
 
 const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
@@ -10,14 +11,14 @@ try {
     });
 
     redis.on("error", (error) => {
-        console.error("Redis Connection Error:", error.message);
+        logger.error({ err: error }, "Redis Connection Error");
     });
 
     redis.once("connect", () => {
-        console.log("Redis connected successfully");
+        logger.info("Redis connected successfully");
     });
 } catch (error) {
-    console.error("Failed to initialize Redis Client:", error.message);
+    logger.error({ err: error }, "Failed to initialize Redis Client");
 }
 
 export default redis;

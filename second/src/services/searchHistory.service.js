@@ -1,4 +1,5 @@
 import { User } from "../models/user.model.js";
+import { logger } from "../utils/logger.js";
 
 /**
  * Saves a user's search query, ensuring no case-insensitive duplicates
@@ -31,7 +32,7 @@ export const saveSearchQuery = async (userId, query) => {
             }
         });
     } catch (error) {
-        console.error(`Failed to save search query for user ${userId}:`, error.message);
+        logger.error({ err: error, userId }, "Failed to save search query");
     }
 };
 
@@ -48,7 +49,7 @@ export const getSearchHistory = async (userId) => {
         // Return sorted by searchedAt descending
         return [...user.searchHistory].sort((a, b) => b.searchedAt - a.searchedAt);
     } catch (error) {
-        console.error(`Failed to get search history for user ${userId}:`, error.message);
+        logger.error({ err: error, userId }, "Failed to get search history");
         return [];
     }
 };

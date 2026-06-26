@@ -1,4 +1,5 @@
 import client from "../config/typesense.js";
+import { logger } from "../utils/logger.js";
 
 export const indexVideo = async (video) => {
     try {
@@ -19,7 +20,7 @@ export const indexVideo = async (video) => {
 
         await client.collections("videos").documents().upsert(document);
     } catch (error) {
-        console.error(`Failed to index video ${video._id} in Typesense:`, error.message);
+        logger.error({ err: error, videoId: video._id }, "Failed to index video in Typesense");
     }
 };
 
@@ -38,7 +39,7 @@ export const indexTweet = async (tweet) => {
 
         await client.collections("tweets").documents().upsert(document);
     } catch (error) {
-        console.error(`Failed to index tweet ${tweet._id} in Typesense:`, error.message);
+        logger.error({ err: error, tweetId: tweet._id }, "Failed to index tweet in Typesense");
     }
 };
 
@@ -46,7 +47,7 @@ export const deleteVideo = async (videoId) => {
     try {
         await client.collections("videos").documents(videoId.toString()).delete();
     } catch (error) {
-        console.error(`Failed to delete video ${videoId} from Typesense:`, error.message);
+        logger.error({ err: error, videoId }, "Failed to delete video from Typesense");
     }
 };
 
@@ -54,7 +55,7 @@ export const deleteTweet = async (tweetId) => {
     try {
         await client.collections("tweets").documents(tweetId.toString()).delete();
     } catch (error) {
-        console.error(`Failed to delete tweet ${tweetId} from Typesense:`, error.message);
+        logger.error({ err: error, tweetId }, "Failed to delete tweet from Typesense");
     }
 };
 
@@ -62,6 +63,6 @@ export const updateVideoViews = async (videoId, views) => {
     try {
         await client.collections("videos").documents(videoId.toString()).update({ views: Number(views) || 0 });
     } catch (error) {
-        console.error(`Failed to update views for video ${videoId} in Typesense:`, error.message);
+        logger.error({ err: error, videoId, views }, "Failed to update views for video in Typesense");
     }
 };

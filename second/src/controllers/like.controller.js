@@ -5,9 +5,13 @@ import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import { sendNotification } from "../services/notification.service.js"
+import { logger } from "../utils/logger.js"
 
 const toggleVideoLike = asyncHandler(async (req, res) => {
     const {videoId} = req.params
+    if (!videoId || !isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid or missing video ID")
+    }
     //TODO: toggle like on video
     const exists = await Like.findOne({
         video:videoId,
@@ -38,7 +42,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
             });
         }
     } catch (notificationError) {
-        console.error("Failed to send like notification:", notificationError.message);
+        logger.error({ err: notificationError, videoId }, "Failed to send like notification");
     }
 
     return res
@@ -48,6 +52,9 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
     const {commentId} = req.params
+    if (!commentId || !isValidObjectId(commentId)) {
+        throw new ApiError(400, "Invalid or missing comment ID")
+    }
     //TODO: toggle like on comment
     const exists = await Like.findOne({
         comment: commentId,
@@ -74,6 +81,9 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 
 const toggleTweetLike = asyncHandler(async (req, res) => {
     const {tweetId} = req.params
+    if (!tweetId || !isValidObjectId(tweetId)) {
+        throw new ApiError(400, "Invalid or missing tweet ID")
+    }
     //TODO: toggle like on tweet
     const exists = await Like.findOne({
         tweet: tweetId,
@@ -110,9 +120,12 @@ const getLikedVideos = asyncHandler(async (req, res) => {
             populate: { path: 'owner', select: 'username avatar fullName' }
         });
 
+    // Filter out likes whose referenced video has been deleted
+    const validLikedVideos = likedVideos.filter(like => like.video);
+
     return res
         .status(200)
-        .json(new ApiResponse(200, likedVideos, "Fetched all Liked Videos Successfully"))
+        .json(new ApiResponse(200, validLikedVideos, "Fetched all Liked Videos Successfully"))
 })
 
 export {

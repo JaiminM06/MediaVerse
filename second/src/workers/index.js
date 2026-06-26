@@ -6,14 +6,15 @@ import "../models/video.model.js";
 import "../models/tweet.model.js";
 import "../models/comment.model.js";
 import "../models/like.model.js";
+import { logger } from "../utils/logger.js";
 
-console.log("Initializing Video Processing Worker Process...");
+logger.info("Initializing Video Processing Worker Process...");
 
 connectDB()
     .then(() => {
-        console.log("Video processing worker started and listening for jobs.");
+        logger.info("Video processing worker started and listening for jobs.");
     })
     .catch((err) => {
-        console.error("Failed to connect worker to database:", err.message);
+        logger.error({ err }, "Failed to connect worker to database");
         process.exit(1);
     });

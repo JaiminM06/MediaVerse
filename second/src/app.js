@@ -1,7 +1,16 @@
 import express from "express"
 import cors from "cors"
 import cookieParser from "cookie-parser"
+import helmet from 'helmet';
+import hpp from 'hpp';
+import { httpLogger } from './utils/httpLogger.js';
+import { logger } from "./utils/logger.js";
+
 const app = express();
+
+app.use(helmet());      // security headers
+app.use(hpp());         // HTTP parameter pollution protection
+app.use(httpLogger);    // HTTP request logging via pino-http
 
 app.use(cors({
     origin: process.env.CORS_ORIGIN || "http://localhost:5173",
@@ -13,6 +22,16 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }))
 
 app.use(express.static("public"))
 app.use(cookieParser())
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'development'
+  });
+});
 
 // Route imports
 import userRouter from './routes/user.routes.js'
@@ -60,7 +79,7 @@ app.use((err, req, res, next) => {
     }
 
     // Unexpected errors
-    console.error("Unhandled Error:", err);
+    logger.error({ err }, "Unhandled Error");
     return res.status(500).json({
         success: false,
         message: "Internal Server Error",

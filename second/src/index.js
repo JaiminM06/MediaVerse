@@ -4,6 +4,7 @@ import connectDB from "./db/index.js";
 import { app } from "./app.js";
 import { initSocket } from "./config/socket.js";
 import { initTypesenseCollections } from "./config/typesenseCollections.js";
+import { logger } from "./utils/logger.js";
 
 const server = http.createServer(app);
 initSocket(server);
@@ -13,12 +14,12 @@ connectDB()
         try {
             await initTypesenseCollections();
         } catch (tsError) {
-            console.error("Typesense initialization failed:", tsError.message);
+            logger.error({ err: tsError }, "Typesense initialization failed");
         }
         server.listen(process.env.PORT || 8000, () => {
-            console.log("Server is running on port:", process.env.PORT || 8000);
+            logger.info(`Server is running on port: ${process.env.PORT || 8000}`);
         });
     })
     .catch((err) => {
-        console.log("MongoDB connection failed:", err);
+        logger.error({ err }, "MongoDB connection failed");
     });

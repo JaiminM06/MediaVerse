@@ -1,5 +1,6 @@
 import Notification from "../models/notification.model.js";
 import { getIO, getOnlineUsers } from "../config/socket.js";
+import { logger } from "../utils/logger.js";
 
 export const sendNotification = async (payload) => {
     const { recipientId, senderId, type, referenceId, referenceModel, message } = payload;
@@ -28,7 +29,7 @@ export const sendNotification = async (payload) => {
             const io = getIO();
             io.to(socketId).emit("notification", { notification: savedNotification });
         } catch (socketError) {
-            console.error("Failed to deliver real-time notification:", socketError.message);
+            logger.error({ err: socketError, recipientId }, "Failed to deliver real-time notification");
         }
     }
 

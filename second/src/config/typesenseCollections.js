@@ -1,4 +1,5 @@
 import client from "./typesense.js";
+import { logger } from "../utils/logger.js";
 
 const videoCollectionSchema = {
   name: "videos",
@@ -39,9 +40,9 @@ export const initTypesenseCollections = async () => {
         try {
             await client.collections(schema.name).retrieve();
         } catch (error) {
-            console.log(`Creating Typesense collection: ${schema.name}...`);
+            logger.info(`Creating Typesense collection: ${schema.name}...`);
             await client.collections().create(schema);
         }
     }
-    console.log("Typesense collections ready");
+    logger.info("Typesense collections ready");
 };

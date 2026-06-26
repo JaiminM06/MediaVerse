@@ -364,13 +364,19 @@ const getWatchHistory = asyncHandler(async (req, res) => {
             populate: { path: 'owner', select: 'username avatar fullName' }
         });
 
+    // Filter out entries whose referenced video has been deleted
+    const validHistory = history.filter(entry => entry.video);
+
     return res
         .status(200)
-        .json(new ApiResponse(200, { watchHistory: history }, 'Watch history fetched successfully'));
+        .json(new ApiResponse(200, { watchHistory: validHistory }, 'Watch history fetched successfully'));
 })
 
-const getUserById =asyncHandler(async(req,res)=>{
+const getUserById = asyncHandler(async(req,res)=>{
         const {userid}=req.params
+        if (!userid || !mongoose.isValidObjectId(userid)) {
+            throw new ApiError(400, "Invalid or missing user ID");
+        }
         const user = await User.findById(userid).select("-password -refreshToken")
         return res
         .status(200)

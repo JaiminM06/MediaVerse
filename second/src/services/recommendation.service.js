@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { Video } from "../models/video.model.js";
 import WatchHistory from "../models/watchHistory.model.js";
+import { logger } from "../utils/logger.js";
 
 /**
  * Returns videos with overlapping tags to the source video
@@ -64,7 +65,7 @@ export const getContentBasedRecommendations = async (videoId, limit = 10) => {
 
         return recommendations;
     } catch (error) {
-        console.error("Content recommendations error:", error.message);
+        logger.error({ err: error, videoId }, "Content recommendations error");
         return [];
     }
 };
@@ -162,7 +163,7 @@ export const getCollaborativeRecommendations = async (videoId, limit = 10) => {
 
         return recommendations;
     } catch (error) {
-        console.error("Collaborative recommendations error:", error.message);
+        logger.error({ err: error, videoId }, "Collaborative recommendations error");
         return [];
     }
 };
@@ -246,7 +247,7 @@ export const getRecommendations = async (videoId, limit = 15) => {
             ]);
             finalMerged = finalMerged.concat(backupVideos);
         } catch (error) {
-            console.error("Backup recommendations fetch error:", error.message);
+            logger.error({ err: error, videoId }, "Backup recommendations fetch error");
         }
     }
 

@@ -5,6 +5,7 @@ import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import { indexTweet as indexTweetSync, deleteTweet as deleteTweetSync } from "../services/typesenseSync.service.js"
+import { logger } from "../utils/logger.js"
 
 const createTweet = asyncHandler(async (req, res) => {
     //TODO: create tweet
@@ -20,7 +21,7 @@ const createTweet = asyncHandler(async (req, res) => {
         .then(popTweet => {
             if (popTweet) indexTweetSync(popTweet);
         })
-        .catch(err => console.error("Typesense tweet index error on create:", err.message));
+        .catch(err => logger.error({ err }, "Typesense tweet index error on create"));
 
     return res
     .status(200)
@@ -63,7 +64,7 @@ const updateTweet = asyncHandler(async (req, res) => {
             .then(popTweet => {
                 if (popTweet) indexTweetSync(popTweet);
             })
-            .catch(err => console.error("Typesense tweet index error on update:", err.message));
+            .catch(err => logger.error({ err }, "Typesense tweet index error on update"));
     }
 
     return res
@@ -81,7 +82,7 @@ const deleteTweet = asyncHandler(async (req, res) => {
         try {
             deleteTweetSync(tweetId);
         } catch (syncError) {
-            console.error("Typesense tweet delete error:", syncError.message);
+            logger.error({ err: syncError, tweetId }, "Typesense tweet delete error");
         }
     }
 

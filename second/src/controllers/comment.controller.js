@@ -5,6 +5,7 @@ import { ApiResponse } from "../utils/ApiResponse.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { Video } from "../models/video.model.js"
 import { getIO } from "../config/socket.js"
+import { logger } from "../utils/logger.js"
 
 const getVideoComments = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
@@ -31,6 +32,9 @@ const getVideoComments = asyncHandler(async (req, res) => {
 
 const addComment = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+    if (!videoId || !mongoose.Types.ObjectId.isValid(videoId)) {
+        throw new ApiError(400, "Invalid or missing video ID")
+    }
     const { content } = req.body
     const comment = await Comment.create(
         {
@@ -48,7 +52,7 @@ const addComment = asyncHandler(async (req, res) => {
         const roomKey = `video-${videoId}`
         io.to(roomKey).emit("new_comment", { comment: savedComment })
     } catch (socketError) {
-        console.error("Failed to emit new_comment via socket:", socketError.message)
+        logger.error({ err: socketError, videoId }, "Failed to emit new_comment via socket")
     }
 
     return res
@@ -58,6 +62,9 @@ const addComment = asyncHandler(async (req, res) => {
 
 const updateComment = asyncHandler(async (req, res) => {
     const { commentId } = req.params
+    if (!commentId || !mongoose.Types.ObjectId.isValid(commentId)) {
+        throw new ApiError(400, "Invalid or missing comment ID")
+    }
     const { content } = req.body
 
     const comment = await Comment.findById(commentId)
@@ -79,6 +86,9 @@ const updateComment = asyncHandler(async (req, res) => {
 
 const deleteComment = asyncHandler(async (req, res) => {
     const { commentId } = req.params
+    if (!commentId || !mongoose.Types.ObjectId.isValid(commentId)) {
+        throw new ApiError(400, "Invalid or missing comment ID")
+    }
 
     const comment = await Comment.findById(commentId)
     if (!comment) {

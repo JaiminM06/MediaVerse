@@ -3,6 +3,7 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import jwt from "jsonwebtoken";
 import redisClient from "./redis.js";
 import { registerRoomHandlers } from "../services/room.service.js";
+import { logger } from "../utils/logger.js";
 
 let io = null;
 const onlineUsers = new Map(); // Map<userId (string), socketId (string)>
@@ -21,9 +22,9 @@ export const initSocket = (server) => {
         const pubClient = redisClient;
         const subClient = pubClient.duplicate();
         io.adapter(createAdapter(pubClient, subClient));
-        console.log("Socket.IO Redis adapter attached successfully.");
+        logger.info("Socket.IO Redis adapter attached successfully.");
     } else {
-        console.warn("Redis client not initialized, skipping Socket.IO Redis adapter.");
+        logger.warn("Redis client not initialized, skipping Socket.IO Redis adapter.");
     }
 
     // JWT authentication middleware — reads from cookie (httpOnly, sent via withCredentials)
@@ -50,7 +51,7 @@ export const initSocket = (server) => {
     io.on("connection", (socket) => {
         if (socket.userId) {
             onlineUsers.set(socket.userId, socket.id);
-            console.log(`Socket connected: User ${socket.userId} on socket ${socket.id}`);
+            logger.info(`Socket connected: User ${socket.userId} on socket ${socket.id}`);
         }
 
         // Register Video Room handlers
@@ -59,7 +60,7 @@ export const initSocket = (server) => {
         socket.on("disconnect", () => {
             if (socket.userId) {
                 onlineUsers.delete(socket.userId);
-                console.log(`Socket disconnected: User ${socket.userId}`);
+                logger.info(`Socket disconnected: User ${socket.userId}`);
             }
         });
     });

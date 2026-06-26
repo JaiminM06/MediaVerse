@@ -12,6 +12,7 @@ import {
     saveSearchQuery,
     getSearchHistory
 } from "../services/searchHistory.service.js";
+import { logger } from "../utils/logger.js";
 
 /**
  * Executes a full-text search across videos, tweets, or both.
@@ -53,7 +54,7 @@ export const search = asyncHandler(async (req, res) => {
     // Save history if user is authenticated (fire-and-forget)
     if (req.user?._id) {
         saveSearchQuery(req.user._id, q).catch(err =>
-            console.error("Failed to save search history:", err.message)
+            logger.error({ err, userId: req.user._id }, "Failed to save search history")
         );
     }
 

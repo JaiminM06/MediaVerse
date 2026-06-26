@@ -15,6 +15,7 @@ import {
     deleteVideo as deleteVideoSync, 
     updateVideoViews as updateVideoViewsSync 
 } from "../services/typesenseSync.service.js"
+import { logger } from "../utils/logger.js"
 
 
 const getInfiniteHomeFeed = asyncHandler(async (req, res) => {
@@ -91,7 +92,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
         .then(popVideo => {
             if (popVideo) indexVideoSync(popVideo);
         })
-        .catch(err => console.error("Typesense index error on publish:", err.message));
+        .catch(err => logger.error({ err }, "Typesense index error on publish"));
 
     return res.status(201).json(
         new ApiResponse(200, uploadedVideo, "video uploaded  successfully")
@@ -100,8 +101,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    if(!videoId?.trim()){
-        throw new ApiError(400,"videoId is missing")
+    if (!videoId || !isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid or missing video ID")
     }
 
     let video = await Video.findById(videoId).populate("owner", "username avatar")
@@ -132,7 +133,7 @@ const getVideoById = asyncHandler(async (req, res) => {
             // Sync views to Typesense (fire and forget) if the video is ready and published
             if (video.isPublished && video.processingStatus === "ready") {
                 updateVideoViewsSync(videoId, video.views).catch(err =>
-                    console.error("Typesense view sync failed:", err.message)
+                    logger.error({ err, videoId }, "Typesense view sync failed")
                 )
             }
         }
@@ -156,7 +157,7 @@ const getVideoById = asyncHandler(async (req, res) => {
             { user: req.user._id, video: videoId },
             { $set: { watchedAt: new Date() } },
             { upsert: true }
-        ).catch(err => console.error("WatchHistory upsert error:", err.message));
+        ).catch(err => logger.error({ err, videoId }, "WatchHistory upsert error"));
     }
 
     return res
@@ -168,6 +169,9 @@ const getVideoById = asyncHandler(async (req, res) => {
 
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+    if (!videoId || !isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid or missing video ID")
+    }
     const { title, description } = req.body
     const thumbnailLocalPath = req.file?.path
 
@@ -210,7 +214,7 @@ const updateVideo = asyncHandler(async (req, res) => {
             .then(popVideo => {
                 if (popVideo) indexVideoSync(popVideo);
             })
-            .catch(err => console.error("Typesense index error on update:", err.message));
+            .catch(err => logger.error({ err }, "Typesense index error on update"));
     }
 
     return res
@@ -221,6 +225,9 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+    if (!videoId || !isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid or missing video ID")
+    }
 
     const video = await Video.findById(videoId)
     if (!video) {
@@ -237,18 +244,24 @@ const deleteVideo = asyncHandler(async (req, res) => {
         try {
             deleteVideoSync(videoId);
         } catch (syncError) {
-            console.error("Typesense delete error:", syncError.message);
+            logger.error({ err: syncError, videoId }, "Typesense delete error");
         }
     }
 
     // Clean up S3 (do not await)
-    if (video.rawFileKey) deleteS3Object(process.env.AWS_S3_RAW_BUCKET, video.rawFileKey).catch(console.error)
-    if (video.hlsManifestUrl) deleteS3Object(process.env.AWS_S3_PROCESSED_BUCKET, `videos/${videoId}`).catch(console.error)
+    if (video.rawFileKey) {
+        deleteS3Object(process.env.AWS_S3_RAW_BUCKET, video.rawFileKey)
+            .catch(err => logger.error({ err }, "Failed to delete S3 raw object"));
+    }
+    if (video.hlsManifestUrl) {
+        deleteS3Object(process.env.AWS_S3_PROCESSED_BUCKET, `videos/${videoId}`)
+            .catch(err => logger.error({ err }, "Failed to delete S3 processed objects"));
+    }
 
     // Clean up orphaned documents (do not await)
-    Like.deleteMany({ video: videoId }).catch(console.error)
-    Comment.deleteMany({ video: videoId }).catch(console.error)
-    WatchHistory.deleteMany({ video: videoId }).catch(console.error)
+    Like.deleteMany({ video: videoId }).catch(err => logger.error({ err }, "Failed to delete video likes"))
+    Comment.deleteMany({ video: videoId }).catch(err => logger.error({ err }, "Failed to delete video comments"))
+    WatchHistory.deleteMany({ video: videoId }).catch(err => logger.error({ err }, "Failed to delete video watch histories"))
 
     return res
     .status(200)
@@ -257,6 +270,9 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+    if (!videoId || !isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid or missing video ID")
+    }
     const video= await Video.findById(videoId)
     if (!video) throw new ApiError(404, "Video not found")
     if(video.isPublished===true){
@@ -274,7 +290,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
                 indexVideoSync(popVideo);
             }
         })
-        .catch(err => console.error("Typesense index error on toggle publish:", err.message));
+        .catch(err => logger.error({ err }, "Typesense index error on toggle publish"));
 
     return res
     .status(200)

@@ -11,6 +11,7 @@ import { Video } from "../models/video.model.js";
 import { s3Client, getCloudFrontUrl } from "../utils/s3.js";
 import { sendNotification } from "../services/notification.service.js";
 import { indexVideo } from "../services/typesenseSync.service.js";
+import { logger } from "../utils/logger.js";
 
 // Helper to resolve MIME type for HLS segments, playlist, and images
 const getContentType = (filename) => {
@@ -120,7 +121,7 @@ const videoProcessor = new Worker("video-processing", async (job) => {
     const localRawPath = path.join(os.tmpdir(), `${videoId}_raw.${ext}`);
     const baseTempDir = path.join(os.tmpdir(), videoId);
 
-    console.log(`Starting job ${job.id} for videoId: ${videoId}`);
+    logger.info({ jobId: job.id, videoId }, "Starting video processing job");
 
     try {
         // 1. DOWNLOAD raw video from S3 raw bucket
@@ -176,7 +177,7 @@ const videoProcessor = new Worker("video-processing", async (job) => {
         for (const res of activeResolutions) {
             const resOutputDir = path.join(baseTempDir, res.name);
             await fsPromises.mkdir(resOutputDir, { recursive: true });
-            console.log(`Transcoding video ${videoId} to ${res.name}...`);
+            logger.info({ videoId, resolution: res.name }, "Transcoding video resolution");
             await transcodeToHLS(localRawPath, resOutputDir, res);
         }
 
@@ -190,11 +191,11 @@ const videoProcessor = new Worker("video-processing", async (job) => {
         await fsPromises.writeFile(path.join(baseTempDir, "master.m3u8"), masterManifestContent);
 
         // 5. GENERATE THUMBNAILS
-        console.log(`Generating thumbnails for video ${videoId}...`);
+        logger.info({ videoId }, "Generating video thumbnails");
         await generateThumbnails(localRawPath, thumbnailDir, duration);
 
         // 6. UPLOAD processed files recursively to S3
-        console.log(`Uploading processed assets to S3 for video ${videoId}...`);
+        logger.info({ videoId }, "Uploading processed assets to S3");
         const uploadedFiles = await uploadDirectoryToS3(baseTempDir, `videos/${videoId}`);
 
         // Compute variants and CloudFront URLs
@@ -230,12 +231,12 @@ const videoProcessor = new Worker("video-processing", async (job) => {
             thumbnail: thumbnails[1] // Use the middle one (50% duration)
         }, { new: true }).populate("owner", "username avatar");
 
-        console.log(`Video processing completed successfully for: ${videoId}`);
+        logger.info({ videoId }, "Video processing completed successfully");
 
         // Sync with Typesense (fire and forget)
         if (updatedVideo) {
             indexVideo(updatedVideo).catch(err =>
-                console.error(`Failed to sync video ${videoId} to Typesense post-process:`, err.message)
+                logger.error({ err }, "Failed to sync video to Typesense post-process")
             );
         }
 
@@ -252,11 +253,11 @@ const videoProcessor = new Worker("video-processing", async (job) => {
                 });
             }
         } catch (notificationError) {
-            console.error("Failed to send video ready notification:", notificationError.message);
+            logger.error({ err: notificationError }, "Failed to send video ready notification");
         }
 
-    } catch (error) {
-        console.error(`Error processing video ${videoId}:`, error.message);
+     } catch (error) {
+        logger.error({ err: error, videoId }, "Error processing video");
         // Set failed status in MongoDB
         await Video.findByIdAndUpdate(videoId, {
             processingStatus: "failed",
@@ -272,9 +273,9 @@ const videoProcessor = new Worker("video-processing", async (job) => {
             if (fs.existsSync(baseTempDir)) {
                 await fsPromises.rm(baseTempDir, { recursive: true, force: true });
             }
-            console.log(`Cleaned up temp files for job: ${job.id}`);
+            logger.info({ jobId: job.id }, "Cleaned up temp files for job");
         } catch (cleanupError) {
-            console.error(`Failed to clean up temp files for ${videoId}:`, cleanupError.message);
+            logger.error({ err: cleanupError, videoId }, "Failed to clean up temp files");
         }
     }
 }, {
@@ -285,7 +286,7 @@ const videoProcessor = new Worker("video-processing", async (job) => {
 // Listener for failed jobs when all retry attempts are exhausted
 videoProcessor.on("failed", async (job, err) => {
     if (job && job.attemptsMade >= (job.opts?.attempts || 1)) {
-        console.log(`Job ${job.id} for videoId: ${job.data?.videoId} failed permanently after ${job.attemptsMade} retries.`);
+        logger.error({ jobId: job.id, videoId: job.data?.videoId, attemptsMade: job.attemptsMade }, "Job failed permanently after max retries");
         try {
             await sendNotification({
                 recipientId: job.data.userId,
@@ -296,7 +297,7 @@ videoProcessor.on("failed", async (job, err) => {
                 message: "Your video could not be processed. Please try uploading again."
             });
         } catch (notifErr) {
-            console.error("Failed to send video processing failure notification:", notifErr);
+            logger.error({ err: notifErr }, "Failed to send video processing failure notification");
         }
     }
 });

@@ -80,6 +80,7 @@ app.get('/api-docs.json', (req, res) => res.json(swaggerSpec));
 
 // Global error handler
 import { ApiError } from "./utils/ApiError.js";
+import * as Sentry from '@sentry/node';
 
 app.use((err, req, res, next) => {
     if (err instanceof ApiError) {
@@ -92,6 +93,10 @@ app.use((err, req, res, next) => {
     }
 
     // Unexpected errors
+    if (process.env.SENTRY_DSN && process.env.NODE_ENV === 'production') {
+      Sentry.captureException(err);
+    }
+
     logger.error({ err }, "Unhandled Error");
     return res.status(500).json({
         success: false,

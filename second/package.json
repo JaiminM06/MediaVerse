@@ -9,16 +9,27 @@
   "scripts": {
     "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
     "worker": "nodemon -r dotenv/config --experimental-json-modules src/workers/index.js",
-    "dev:all": "concurrently \"npm run dev\" \"npm run worker\""
+    "dev:all": "concurrently \"npm run dev\" \"npm run worker\"",
+    "lint": "eslint src",
+    "test": "set NODE_OPTIONS=--experimental-vm-modules && jest",
+    "test:coverage": "set NODE_OPTIONS=--experimental-vm-modules && jest --coverage",
+    "test:watch": "set NODE_OPTIONS=--experimental-vm-modules && jest --watch",
+    "docker:dev": "docker-compose -f docker-compose.dev.yml up",
+    "docker:prod": "docker-compose up -d",
+    "docker:down": "docker-compose down"
   },
   "devDependencies": {
     "concurrently": "^10.0.3",
+    "eslint": "^10.5.0",
+    "jest": "^30.4.2",
     "nodemon": "^3.1.10",
-    "prettier": "^3.6.2"
+    "prettier": "^3.6.2",
+    "supertest": "^7.2.2"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1073.0",
     "@aws-sdk/s3-request-presigner": "^3.1073.0",
+    "@sentry/node": "^10.62.0",
     "@socket.io/redis-adapter": "^8.3.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.79.0",

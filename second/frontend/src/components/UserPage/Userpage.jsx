@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { User, Mail, Calendar, Users, Video, Settings, LogOut, Play } from "lucide-react";
+import { User, Mail, Calendar, Users, Video, Settings, LogOut, Play, BarChart2 } from "lucide-react";
 
 function UserPage() {
   const [user, setUser] = useState(null);
@@ -124,6 +124,13 @@ function UserPage() {
               <Video size={18} /> Manage Videos
             </button>
             <button
+              onClick={() => navigate('/Home/dashboard')}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              <BarChart2 size={16} />
+              Creator Dashboard
+            </button>
+            <button
               onClick={handleLogout}
               className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-red-50 text-red-600 px-4 py-2.5 rounded-xl font-medium hover:bg-red-100 transition-colors"
             >
@@ -143,7 +150,7 @@ function UserPage() {
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Video size={32} className="text-slate-400" />
               </div>
-              <p className="text-slate-500 font-medium">You haven’t uploaded any videos yet.</p>
+              <p className="text-slate-500 font-medium">You haven't uploaded any videos yet.</p>
               <button
                 onClick={() => navigate("/Home/uploadVideo")}
                 className="mt-4 text-brand-600 font-semibold hover:underline"

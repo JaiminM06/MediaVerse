@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Play } from "lucide-react";
+import { formatDuration } from '../../utils/formatDuration.js';
 
 export default function Feed() {
   const [videos, setVideos] = useState([]);
@@ -93,15 +94,7 @@ export default function Feed() {
                 </div>
                 {/* Duration Badge */}
                 <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-md text-white text-xs font-medium px-1.5 py-0.5 rounded">
-                  {
-                    video.duration
-                      ? `${Math.floor(video.duration / 60)}:${Math.floor(video.duration % 60)
-                        .toString()
-                        .padStart(2, '0')}`
-                      : `${(index % 10) + 5}:${((index * 3) % 60)
-                        .toString()
-                        .padStart(2, '0')}`
-                  }
+                  {formatDuration(video.duration)}
                 </div>
               </div>
 

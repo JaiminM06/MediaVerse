@@ -12,6 +12,7 @@ export default function VideoUpload() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const pollRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     return () => {
@@ -104,6 +105,7 @@ export default function VideoUpload() {
             setTitle("");
             setDescription("");
             setVideoFile(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
             setUploadProgress(0);
           } else if (status === "failed") {
             clearInterval(pollRef.current);
@@ -178,6 +180,7 @@ export default function VideoUpload() {
               <label className="block text-sm font-medium text-slate-700 mb-2">Video File</label>
               <div className="relative group">
                 <input
+                  ref={fileInputRef}
                   type="file"
                   accept="video/mp4,video/webm,video/quicktime"
                   id="video-upload"

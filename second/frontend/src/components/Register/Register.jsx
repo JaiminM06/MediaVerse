@@ -12,6 +12,7 @@ function Register() {
   const [coverFile, setCoverFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const navigate = useNavigate();
 
@@ -19,6 +20,7 @@ function Register() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
 
     const formData = new FormData();
     formData.append("fullName", fullName);
@@ -33,8 +35,8 @@ function Register() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // Redirect to home/login
-      navigate("/");
+      setSuccess("Account created! Redirecting to login...");
+      setTimeout(() => navigate('/login'), 1500);
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.message || "Registration failed. Please try again.");
@@ -53,7 +55,7 @@ function Register() {
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
           <div className="relative z-10">
             <h1 className="text-2xl font-bold text-white mb-1">Create Account</h1>
-            <p className="text-brand-100 text-sm">Join MyTube today</p>
+            <p className="text-brand-100 text-sm">Join MediaVerse today</p>
           </div>
         </div>
 
@@ -63,6 +65,13 @@ function Register() {
             <div className="mb-6 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
               {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-6 p-3 bg-green-50 text-green-600 text-sm rounded-lg flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+              {success}
             </div>
           )}
 

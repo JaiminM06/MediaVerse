@@ -7,6 +7,7 @@ function UpdateVideo({ videoId, goBack }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [thumbnail, setThumbnail] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
@@ -28,23 +29,23 @@ function UpdateVideo({ videoId, goBack }) {
     fetchVideo();
   }, [videoId]);
 
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const handleThumbnailChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+
+    setThumbnail(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
   const handleUpdate = async () => {
-    // Thumbnail is technically optional depending on backend logic, but let's assume it's like before logic (or let's make it optional if user doesn't want to change it)
-    // But previous code required it. Let's keep it robust.
-    // Actually, forcing a new thumbnail on update is bad UX. Let's allow update without new thumbnail if possible, but the previous code required it. 
-    // I will check if thumbnail state is set. If not, maybe don't append it?
-    // The previous code had `if (!thumbnail) alert...` so I will stick to requiring it for now unless I change backend logic which I can't see.
-    // However, usually updates allow partials. I'll stick to safer side: require it if it was required, or try to be smart.
-    // Let's assume user might want to keep old thumbnail. 
-    // Actually, looking at previous code: `formData.append("thumbnail", thumbnail);` 
-    // If I send null, backend might error. 
-    // I will stick to current logic: if thumbnail is provided, send it. If not, do not append.
-
-    // Previous code forced it: if (!thumbnail) { alert... return; }
-    // I will improve this to be optional if feasible, but to be safe with existing backend, maybe I should just keep it required if I don't know backend validation.
-    // Wait, the "previous code" is my reference. I should try to improve UX.
-    // I will make it optional in UI, but if backend fails, user will know.
-
     const formData = new FormData();
     formData.append("title", title);
     formData.append("description", description);
@@ -59,10 +60,8 @@ function UpdateVideo({ videoId, goBack }) {
         formData,
         { withCredentials: true, headers: { "Content-Type": "multipart/form-data" } }
       );
-      // alert("Video updated successfully!"); // Replace with cleaner UI feedback if possible, or keep simple
-      goBack(); // This returns to the list, which might be enough confirmation? Maybe I should have a toast system, but I don't have one globally.
+      goBack();
     } catch (error) {
-      //   alert("Failed to update video!");
       console.error(error);
     } finally {
       setLoading(false);
@@ -96,7 +95,7 @@ function UpdateVideo({ videoId, goBack }) {
             <div className="flex gap-6 items-start">
               <div className="w-48 aspect-video bg-slate-200 rounded-lg overflow-hidden shadow-sm flex-shrink-0">
                 <img
-                  src={thumbnail ? URL.createObjectURL(thumbnail) : video.thumbnail}
+                  src={previewUrl || video.thumbnail}
                   alt="Thumbnail Preview"
                   className="w-full h-full object-cover"
                 />
@@ -108,7 +107,7 @@ function UpdateVideo({ videoId, goBack }) {
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) => setThumbnail(e.target.files[0])}
+                    onChange={handleThumbnailChange}
                     className="hidden"
                   />
                 </label>

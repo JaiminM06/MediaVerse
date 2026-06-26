@@ -41,7 +41,7 @@ function Login() {
           <div className="absolute top-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
 
           <div className="relative z-10">
-            <h1 className="text-3xl font-bold text-white mb-2">MyTube</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">MediaVerse</h1>
             <p className="text-brand-100">Welcome back to the community</p>
           </div>
         </div>
@@ -110,7 +110,7 @@ function Login() {
           </form>
 
           <p className="text-center text-slate-500 text-sm mt-8">
-            Don’t have an account?{" "}
+            Don't have an account?{" "}
             <Link to="/Register" className="text-brand-600 hover:text-brand-700 font-semibold hover:underline">
               Create Account
             </Link>

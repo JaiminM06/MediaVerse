@@ -47,11 +47,11 @@ export default function Layout() {
 
   const navItems = [
     { to: "/Home/feed", icon: Home, label: "Home" },
-    { to: "trending", icon: Flame, label: "Trending" },
-    { to: "library", icon: Library, label: "Library" },
-    { to: "dashboard", icon: BarChart2, label: "Dashboard" },
-    { to: "uploadVideo", icon: Upload, label: "Upload" },
-    { to: "user", icon: User, label: "Profile" },
+    { to: "/Home/trending", icon: Flame, label: "Trending" },
+    { to: "/Home/library", icon: Library, label: "Library" },
+    { to: "/Home/dashboard", icon: BarChart2, label: "Dashboard" },
+    { to: "/Home/uploadVideo", icon: Upload, label: "Upload" },
+    { to: "/Home/user", icon: User, label: "Profile" },
   ];
 
   return (

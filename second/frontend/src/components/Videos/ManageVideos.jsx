@@ -52,7 +52,7 @@ function ManageVideos() {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                     <div>
                         <button
-                            onClick={() => navigate("/Home/user")}
+                            onClick={() => navigate("/Home/dashboard")}
                             className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors mb-2 font-medium"
                         >
                             <ArrowLeft size={20} /> Back to Dashboard

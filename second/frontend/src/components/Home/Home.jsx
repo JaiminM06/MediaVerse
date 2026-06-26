@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 
 
@@ -31,7 +31,6 @@ function Home() {
           </li>
         </ul>
       </div>
-      <Outlet />
     </div>
   );
 }

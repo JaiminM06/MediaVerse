@@ -104,13 +104,13 @@ const router = createBrowserRouter(
         <Route path='feed' element={<Feed />} />
         <Route path='trending' element={<Trending />} />
         <Route path='library' element={<ProtectedRoute><Library /></ProtectedRoute>} />
-        <Route path=':id' element={<VideoPlayer />} />
         <Route path='user' element={<ProtectedRoute><UserPage /></ProtectedRoute>} />
         <Route path='ManageAccount' element={<ProtectedRoute><ManageAccount /></ProtectedRoute>} />
         <Route path='dashboard' element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path='dashboard/video/:videoId' element={<ProtectedRoute><VideoAnalytics /></ProtectedRoute>} />
-
         <Route path='uploadVideo' element={<ProtectedRoute><Upload /></ProtectedRoute>} />
+        <Route path='ManageVideos' element={<ProtectedRoute><ManageVideos /></ProtectedRoute>} />
+        <Route path=':id' element={<VideoPlayer />} />
       </Route>
     </>
   )

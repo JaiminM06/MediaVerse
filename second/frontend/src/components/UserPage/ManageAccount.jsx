@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { Upload, User, Image, Lock, ArrowLeft, Save, Loader2, Key } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -13,8 +13,25 @@ export default function ManageAccount() {
     const [cover, setCover] = useState(null);
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
+    const [loadingDetails, setLoadingDetails] = useState(true);
     const [message, setMessage] = useState({ type: "", text: "" });
     const navigate = useNavigate();
+
+    useEffect(() => {
+        axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/users/current-user`,
+            { withCredentials: true }
+        )
+        .then(res => {
+            const user = res.data.data;
+            setDetails({
+                fullName: user.fullName || '',
+                email:    user.email    || ''
+            });
+        })
+        .catch(err => console.error('Failed to load user details:', err))
+        .finally(() => setLoadingDetails(false));
+    }, []);
 
     // 🔒 Change Password
     const handlePasswordChange = async (e) => {
@@ -201,29 +218,37 @@ export default function ManageAccount() {
                                 <form onSubmit={handleDetailsUpdate} className="space-y-5 max-w-lg">
                                     <div className="space-y-1">
                                         <label className="text-sm font-medium text-slate-700">Full Name</label>
-                                        <input
-                                            type="text"
-                                            placeholder="John Doe"
-                                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all"
-                                            value={details.fullName}
-                                            onChange={(e) => setDetails({ ...details, fullName: e.target.value })}
-                                        />
+                                        {loadingDetails ? (
+                                            <div className="w-full h-[48px] bg-slate-700 animate-pulse rounded-xl" />
+                                        ) : (
+                                            <input
+                                                type="text"
+                                                placeholder="John Doe"
+                                                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all"
+                                                value={details.fullName}
+                                                onChange={(e) => setDetails({ ...details, fullName: e.target.value })}
+                                            />
+                                        )}
                                         {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-sm font-medium text-slate-700">Email Address</label>
-                                        <input
-                                            type="email"
-                                            placeholder="name@example.com"
-                                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all"
-                                            value={details.email}
-                                            onChange={(e) => setDetails({ ...details, email: e.target.value })}
-                                        />
+                                        {loadingDetails ? (
+                                            <div className="w-full h-[48px] bg-slate-700 animate-pulse rounded-xl" />
+                                        ) : (
+                                            <input
+                                                type="email"
+                                                placeholder="name@example.com"
+                                                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all"
+                                                value={details.email}
+                                                onChange={(e) => setDetails({ ...details, email: e.target.value })}
+                                            />
+                                        )}
                                         {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                                     </div>
                                     <button
                                         type="submit"
-                                        disabled={loading}
+                                        disabled={loading || loadingDetails}
                                         className="bg-brand-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-700 transition-all flex items-center gap-2 disabled:opacity-70"
                                     >
                                         {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
@@ -332,4 +357,3 @@ export default function ManageAccount() {
         </div>
     );
 }
-

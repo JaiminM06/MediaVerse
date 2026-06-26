@@ -40,10 +40,14 @@ export default function NotificationBell({ socket }) {
     if (!socket) return;
 
     socket.on("notification", (data) => {
-      if (data?.notification) {
-        setNotifications((prev) => [data.notification, ...prev]);
-        setUnreadCount((prev) => prev + 1);
-      }
+      const incoming = {
+        ...data.notification,
+        isRead: false,
+        read: false,
+        createdAt: data.notification.createdAt || new Date().toISOString()
+      };
+      setNotifications((prev) => [incoming, ...prev]);
+      setUnreadCount((prev) => prev + 1);
     });
 
     return () => {

@@ -67,6 +67,17 @@ app.use("/api/v1", recommendationRouter)
 app.use("/api/v1", trendingRouter)
 app.use("/api/v1/analytics", analyticsRouter)
 
+// Swagger UI configuration
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger.js';
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'MediaVerse API Docs'
+}));
+
+app.get('/api-docs.json', (req, res) => res.json(swaggerSpec));
+
 // Global error handler
 import { ApiError } from "./utils/ApiError.js";
 

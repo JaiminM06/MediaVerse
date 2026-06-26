@@ -42,6 +42,8 @@
     "recharts": "^3.9.0",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
     "typesense": "^3.0.6",
     "zod": "^4.4.3"
   }

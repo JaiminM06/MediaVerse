@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
-import { ThumbsUp, ThumbsDown, Share2, Bookmark, User, MessageCircle } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Share2, Bookmark, User } from "lucide-react";
 import Hls from "hls.js";
 
 export default function VideoPlayer() {

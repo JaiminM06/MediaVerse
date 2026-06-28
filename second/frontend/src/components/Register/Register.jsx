@@ -31,12 +31,17 @@ function Register() {
     if (coverFile) formData.append("coverImage", coverFile);
 
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/users/register`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/users/register`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
+        }
+      );
 
       setSuccess("Account created! Redirecting to login...");
-      setTimeout(() => navigate('/login'), 1500);
+      setTimeout(() => navigate("/Login"), 1500);
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.message || "Registration failed. Please try again.");

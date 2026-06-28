@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { Bell, Check, Trash2, ShieldAlert } from "lucide-react";
+import { Bell, Check } from "lucide-react";
+
+const isUnread = (notif) => !(notif.isRead ?? notif.read);
 
 export default function NotificationBell({ socket }) {
   const [notifications, setNotifications] = useState([]);
@@ -43,8 +45,7 @@ export default function NotificationBell({ socket }) {
       const incoming = {
         ...data.notification,
         isRead: false,
-        read: false,
-        createdAt: data.notification.createdAt || new Date().toISOString()
+        createdAt: data.notification.createdAt || new Date().toISOString(),
       };
       setNotifications((prev) => [incoming, ...prev]);
       setUnreadCount((prev) => prev + 1);
@@ -115,20 +116,20 @@ export default function NotificationBell({ socket }) {
                 <div
                   key={notif._id}
                   className={`p-4 flex gap-3 hover:bg-slate-50 transition-all ${
-                    !notif.read ? "bg-brand-50/20" : ""
+                    isUnread(notif) ? "bg-brand-50/20" : ""
                   }`}
                 >
                   {/* Indicator Dot */}
                   <div className="flex-shrink-0 mt-1">
                     <div
                       className={`h-2.5 w-2.5 rounded-full ${
-                        !notif.read ? "bg-red-500 animate-pulse" : "bg-slate-300"
+                        isUnread(notif) ? "bg-red-500 animate-pulse" : "bg-slate-300"
                       }`}
                     />
                   </div>
                   {/* Notification Body */}
                   <div className="flex-1 min-w-0">
-                    <p className={`text-xs text-slate-700 leading-snug break-words ${!notif.read ? "font-semibold text-slate-900" : ""}`}>
+                    <p className={`text-xs text-slate-700 leading-snug break-words ${isUnread(notif) ? "font-semibold text-slate-900" : ""}`}>
                       {notif.message}
                     </p>
                     <span className="text-[10px] text-slate-400 block mt-1">

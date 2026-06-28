@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { Flame, MoreVertical, Loader2 } from "lucide-react";
+import { Flame, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDuration } from '../../utils/formatDuration.js';
 
@@ -39,8 +39,7 @@ function Trending() {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6 md:p-8">
-            <div className="max-w-6xl mx-auto">
+        <div className="max-w-6xl mx-auto">
 
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-6">
@@ -49,7 +48,7 @@ function Trending() {
                     </div>
                     <div>
                         <h1 className="text-3xl font-bold text-slate-900">Trending Now</h1>
-                        <p className="text-slate-500">Most watched videos today</p>
+                        <p className="text-slate-500 capitalize">Most watched videos this {period}</p>
                     </div>
                 </div>
 
@@ -133,17 +132,11 @@ function Trending() {
                                         {video.description}
                                     </p>
                                 </div>
-
-                                {/* Action */}
-                                <button className="self-start sm:self-center p-2 text-slate-400 hover:text-slate-800 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <MoreVertical size={20} />
-                                </button>
                             </div>
                         ))}
                     </div>
                 )}
 
-            </div>
         </div>
     );
 }

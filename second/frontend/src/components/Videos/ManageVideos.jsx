@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Upload from "./upload.jsx"
 import UpdateVideo from "./UpdateVideo.jsx";
+import PageLoader from "../ui/PageLoader.jsx";
 import { Upload as UploadIcon, Edit, Trash2, ArrowLeft, Video } from "lucide-react";
 
 function ManageVideos() {
@@ -46,8 +47,7 @@ function ManageVideos() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6 md:p-8">
-            <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                     <div>
@@ -109,7 +109,9 @@ function ManageVideos() {
                                 <p className="text-slate-500">This action cannot be undone.</p>
                             </div>
 
-                            {videos.length === 0 ? (
+                            {loading ? (
+                                <PageLoader label="Loading your videos..." />
+                            ) : videos.length === 0 ? (
                                 <p className="text-center text-slate-400 py-12">No videos found to delete.</p>
                             ) : (
                                 <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -153,7 +155,9 @@ function ManageVideos() {
                                         <p className="text-slate-500">Click on any video below to update its details.</p>
                                     </div>
 
-                                    {videos.length === 0 ? (
+                                    {loading ? (
+                                <PageLoader label="Loading your videos..." />
+                            ) : videos.length === 0 ? (
                                         <p className="text-center text-slate-400 py-12">No videos found to update.</p>
                                     ) : (
                                         <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -188,7 +192,6 @@ function ManageVideos() {
                         </div>
                     )}
                 </div>
-            </div>
         </div>
     );
 }

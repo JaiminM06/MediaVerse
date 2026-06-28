@@ -46,8 +46,8 @@ function UserPage() {
         withCredentials: true,
       });
       navigate("/");
-    } catch (error) {
-      console.log("Logout Unsuccessful");
+    } catch {
+      console.error("Logout failed");
     }
   };
 

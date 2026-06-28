@@ -16,12 +16,10 @@ const useSocket = (userId) => {
       }
     );
 
-    newSocket.on('connect', () => {
-      console.log('Socket connected:', newSocket.id);
-    });
-
     newSocket.on('connect_error', (err) => {
-      console.error('Socket connection error:', err.message);
+      if (import.meta.env.DEV) {
+        console.error('Socket connection error:', err.message);
+      }
     });
 
     setSocket(newSocket);

@@ -53,7 +53,8 @@ function Library() {
         fetchData();
     }, []);
 
-    const VideoSection = ({ title, icon: Icon, videos, isExpanded, onToggle }) => {
+    const VideoSection = ({ title, icon, videos, isExpanded, onToggle }) => {
+        const SectionIcon = icon;
         const displayedVideos = isExpanded ? videos : videos.slice(0, PREVIEW_LIMIT);
         const hasMore = videos.length > PREVIEW_LIMIT;
 
@@ -61,7 +62,7 @@ function Library() {
         <div className="mb-12">
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                    <Icon size={24} className="text-brand-600" />
+                    <SectionIcon size={24} className="text-brand-600" />
                     {title}
                 </h2>
                 {hasMore && (

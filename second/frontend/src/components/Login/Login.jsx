@@ -76,7 +76,7 @@ function Login() {
             <div className="space-y-1">
               <div className="flex justify-between items-center ml-1">
                 <label className="text-sm font-medium text-slate-700">Password</label>
-                <a href="#" className="text-xs font-medium text-brand-600 hover:text-brand-700">Forgot?</a>
+                <span className="text-xs font-medium text-slate-400">Forgot password?</span>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />

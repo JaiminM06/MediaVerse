@@ -42,21 +42,24 @@ export default function TwitterLayout() {
     </button>
   );
 
-  const RailNavItem = ({ to, icon: Icon, label }) => (
-    <NavLink
-      to={to}
-      title={label}
-      aria-label={label}
-      onClick={() => setMobileMenuOpen(false)}
-      className={({ isActive }) =>
-        `group flex items-center justify-center w-12 h-12 rounded-full transition-colors ${
-          isActive ? "bg-[#E8F5FE] text-[#1DA1F2]" : "text-[#0F1419] hover:bg-[#F7F9FA]"
-        }`
-      }
-    >
-      <Icon size={24} />
-    </NavLink>
-  );
+  const RailNavItem = ({ to, icon, label }) => {
+    const Icon = icon;
+    return (
+      <NavLink
+        to={to}
+        title={label}
+        aria-label={label}
+        onClick={() => setMobileMenuOpen(false)}
+        className={({ isActive }) =>
+          `group flex items-center justify-center w-12 h-12 rounded-full transition-colors ${
+            isActive ? "bg-[#E8F5FE] text-[#1DA1F2]" : "text-[#0F1419] hover:bg-[#F7F9FA]"
+          }`
+        }
+      >
+        <Icon size={24} />
+      </NavLink>
+    );
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#F7F9FA] text-[#0F1419] font-sans">

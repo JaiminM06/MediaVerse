@@ -6,7 +6,6 @@ import TweetComposer from "./TweetComposer";
 
 export default function TweetCard({
   tweet,
-  currentUserId,
   onRetweet,
   onReply,
   onQuote,
@@ -60,7 +59,7 @@ export default function TweetCard({
         {},
         { withCredentials: true }
       );
-    } catch (err) {
+    } catch {
       setLiked(originalLiked);
       setLocalLikeCount(originalLikeCount);
     }
@@ -86,7 +85,7 @@ export default function TweetCard({
         setRetweeted(res.data.data.retweeted);
       }
       if (onRetweet) onRetweet(displayTweet._id);
-    } catch (err) {
+    } catch {
       setRetweeted(originalRetweeted);
       setLocalRetweetCount(originalRetweetCount);
     }

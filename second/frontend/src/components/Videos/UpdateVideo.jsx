@@ -69,40 +69,38 @@ function UpdateVideo({ videoId, goBack }) {
   };
 
   if (fetching) return (
-    <div className="flex justify-center p-12">
-      <Loader2 className="animate-spin text-brand-600" size={32} />
+    <div className="flex justify-center py-20">
+      <Loader2 className="animate-spin text-[#FF0000]" size={32} />
     </div>
   );
 
-  if (!video) return <p className="text-red-500 p-4">Error loading video detail.</p>;
+  if (!video) return <p className="text-red-500 p-4 text-center">Error loading video detail.</p>;
 
   return (
     <div className="max-w-2xl mx-auto">
       <button
         onClick={goBack}
-        className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors mb-6 font-medium"
+        className="flex items-center gap-2 text-[#AAAAAA] hover:text-white transition-colors mb-6 font-medium text-sm"
       >
-        <ArrowLeft size={20} /> Cancel Editing
+        <ArrowLeft size={16} /> Cancel Editing
       </button>
 
-      <div className="bg-slate-50 rounded-2xl p-6 md:p-8 border border-slate-200">
-        <h2 className="text-2xl font-bold text-slate-800 mb-6">Update Video Details</h2>
+      <div className="bg-[#1A1A1A] border border-[#272727] rounded-2xl p-6 md:p-8">
+        <h2 className="text-white text-2xl font-bold mb-8">Update Video</h2>
 
         <div className="space-y-6">
-          {/* Preview Current or New Thumbnail */}
+          {/* Thumbnail Section */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Thumbnail</label>
-            <div className="flex gap-6 items-start">
-              <div className="w-48 aspect-video bg-slate-200 rounded-lg overflow-hidden shadow-sm flex-shrink-0">
-                <img
-                  src={previewUrl || video.thumbnail}
-                  alt="Thumbnail Preview"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="cursor-pointer inline-flex items-center gap-2 bg-white border border-slate-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
-                  <ImageIcon size={18} />
+            <label className="text-[#AAAAAA] text-sm font-medium mb-2 block">Thumbnail</label>
+            <div className="flex flex-col gap-4">
+              <img
+                src={previewUrl || video.thumbnail}
+                alt="Thumbnail Preview"
+                className="w-full h-48 object-cover rounded-xl bg-[#272727]"
+              />
+              <div>
+                <label className="cursor-pointer border border-[#383838] text-white rounded-full px-4 py-2 hover:bg-[#272727] text-sm font-medium transition-colors inline-flex items-center gap-2 cursor-pointer">
+                  <ImageIcon size={16} />
                   <span>Change Thumbnail</span>
                   <input
                     type="file"
@@ -111,43 +109,40 @@ function UpdateVideo({ videoId, goBack }) {
                     className="hidden"
                   />
                 </label>
-                <p className="text-xs text-slate-500 mt-2">Recommended: 16:9 aspect ratio, max 2MB.</p>
+                <p className="text-[#606060] text-xs mt-2">Recommended: 16:9 aspect ratio, max 2MB.</p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-semibold text-slate-700">Video Title</label>
+          {/* Title */}
+          <div>
+            <label className="text-[#AAAAAA] text-sm font-medium mb-2 block">Video Title</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all"
+              className="bg-[#272727] border border-[#383838] rounded-xl text-white px-4 py-3 placeholder-[#606060] focus:border-[#AAAAAA] focus:outline-none w-full transition-colors"
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-semibold text-slate-700">Description</label>
+          {/* Description */}
+          <div>
+            <label className="text-[#AAAAAA] text-sm font-medium mb-2 block">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all h-32 resize-none"
+              className="bg-[#272727] border border-[#383838] rounded-xl text-white px-4 py-3 placeholder-[#606060] focus:border-[#AAAAAA] focus:outline-none w-full transition-colors h-32 resize-none"
             />
           </div>
 
-          <div className="pt-4 flex justify-end gap-3">
-            <button
-              onClick={goBack}
-              className="px-6 py-2.5 rounded-xl font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
-            >
-              Cancel
-            </button>
+          {/* Action Button */}
+          <div className="pt-2">
             <button
               onClick={handleUpdate}
               disabled={loading}
-              className="bg-brand-600 text-white px-8 py-2.5 rounded-xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-600/20 flex items-center gap-2 disabled:opacity-70"
+              className="w-full bg-[#FF0000] hover:bg-red-600 text-white rounded-full py-3 font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+              {loading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
               Save Changes
             </button>
           </div>

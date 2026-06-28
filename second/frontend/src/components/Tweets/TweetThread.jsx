@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { motion } from "framer-motion";
 import useSocket from "../../hooks/useSocket.js";
 import TweetCard from "./TweetCard";
 import TweetComposer from "./TweetComposer";
@@ -128,34 +129,57 @@ export default function TweetThread() {
     fetchThread(nextPage, true);
   };
 
+  // Loading skeleton state
   if (loading && !rootTweet) {
     return (
-      <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center">
-        <svg className="animate-spin h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
+      <div className="bg-[#000000] min-h-screen text-white">
+        <div className="sticky top-0 z-10 bg-[#000000]/80 backdrop-blur-sm border-b border-[#2F3336] px-4 py-3 flex items-center gap-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-white hover:bg-white/10 p-2 rounded-full transition-colors"
+          >
+            ←
+          </button>
+          <h2 className="text-white font-bold text-xl">Post</h2>
+        </div>
+
+        <div className="space-y-0">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="animate-pulse flex gap-3 p-4 border-b border-[#2F3336]">
+              <div className="w-10 h-10 rounded-full bg-[#272727] flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 bg-[#272727] rounded w-1/3" />
+                <div className="h-3 bg-[#272727] rounded w-full" />
+                <div className="h-3 bg-[#272727] rounded w-3/4" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-4 md:p-6">
-      <div className="max-w-2xl mx-auto space-y-4">
-        <div className="flex items-center gap-3">
-          <button 
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2 }}
+      className="bg-[#000000] min-h-screen text-white"
+    >
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-[#000000]/80 backdrop-blur-sm border-b border-[#2F3336] px-4 py-3 flex items-center gap-6">
+          <button
             onClick={() => navigate(-1)}
-            className="p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-300 hover:text-white"
+            className="text-white hover:bg-white/10 p-2 rounded-full transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
+            ←
           </button>
-          <h1 className="text-xl font-bold">Thread</h1>
+          <h2 className="text-white font-bold text-xl">Post</h2>
         </div>
 
         {error && (
-          <div className="p-4 border border-red-500/30 bg-red-950/20 rounded-xl text-center">
+          <div className="p-4 border border-red-500/30 bg-red-950/20 rounded-xl text-center my-4 mx-4">
             <p className="text-red-400 text-sm font-medium mb-3">{error}</p>
             <button
               onClick={() => fetchThread(1, false)}
@@ -167,17 +191,22 @@ export default function TweetThread() {
         )}
 
         {rootTweet && (
-          <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl overflow-hidden shadow-md">
-            <TweetCard
-              tweet={rootTweet}
-              currentUserId={currentUserId}
-              onQuote={() => {}}
-              onRetweet={() => {}}
-              onReply={() => {}}
-            />
+          <div>
+            {/* Root Tweet */}
+            <div className="border-b border-[#2F3336]">
+              <TweetCard
+                tweet={rootTweet}
+                currentUserId={currentUserId}
+                isRootInThread={true}
+                onQuote={() => {}}
+                onRetweet={() => {}}
+                onReply={() => {}}
+              />
+            </div>
 
+            {/* Composer Section for reply */}
             {currentUserId && (
-              <div className="p-4 border-t border-slate-700/50 bg-slate-800/20">
+              <div className="border-b border-[#2F3336]">
                 <TweetComposer
                   parentTweetId={tweetId}
                   onTweetPosted={handleReplyPosted}
@@ -185,9 +214,10 @@ export default function TweetThread() {
               </div>
             )}
 
-            <div className="border-t border-slate-700/50 divide-y divide-slate-700/30">
+            {/* Replies List */}
+            <div className="divide-y divide-[#2F3336]">
               {replies.map((reply) => (
-                <div key={reply._id} className="pl-4 md:pl-6 bg-slate-800/10">
+                <div key={reply._id} className="border-b border-[#2F3336]">
                   <TweetCard
                     tweet={reply}
                     currentUserId={currentUserId}
@@ -198,21 +228,20 @@ export default function TweetThread() {
                 </div>
               ))}
             </div>
-            
+
+            {/* Load More Button */}
             {hasMore && (
-              <div className="p-4 flex justify-center border-t border-slate-700/30">
-                <button
-                  onClick={loadMoreReplies}
-                  disabled={loadingMore}
-                  className="px-6 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-200 text-sm font-semibold rounded-full transition-colors"
-                >
-                  {loadingMore ? "Loading..." : "Load More Replies"}
-                </button>
-              </div>
+              <button
+                onClick={loadMoreReplies}
+                disabled={loadingMore}
+                className="w-full py-4 text-[#1DA1F2] hover:bg-white/5 transition-colors text-sm font-medium border-b border-[#2F3336]"
+              >
+                {loadingMore ? "Loading more replies..." : "Load more replies"}
+              </button>
             )}
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

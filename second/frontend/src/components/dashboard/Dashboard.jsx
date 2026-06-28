@@ -17,6 +17,7 @@ import {
   Cell
 } from "recharts";
 import { Eye, Clock, Users, Video, AlertCircle, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 import { PIE_COLORS } from "../../constants/chartColors.js";
 
 export default function Dashboard() {
@@ -170,97 +171,126 @@ export default function Dashboard() {
     }
   };
 
+  const tooltipContentStyle = {
+    backgroundColor: '#1A1A1A',
+    border: '1px solid #272727',
+    borderRadius: 8,
+    color: '#fff'
+  };
+
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 space-y-8 bg-gray-50/30 min-h-screen">
-      {/* Header */}
-      <div className="flex justify-between items-center border-b border-slate-200 pb-5">
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="bg-[#0F0F0F] min-h-screen p-6"
+    >
+      {/* Page Header */}
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Channel Analytics</h1>
-          <p className="text-sm text-slate-500 mt-1">Real-time creator analytics and video performance</p>
+          <h1 className="text-white text-2xl font-bold">Channel Analytics</h1>
+          <p className="text-[#AAAAAA] text-sm mt-1">{today}</p>
         </div>
-        <span className="bg-white border border-slate-200 shadow-sm rounded-full px-4 py-2 text-xs font-semibold text-slate-600">
-          {today}
-        </span>
       </div>
 
-      {/* SECTION 1: Summary Stat Cards */}
+      {/* STAT CARDS (4 cards in a grid) */}
       <div>
         {summaryError && (
-          <div className="p-4 mb-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-2 text-red-600">
+          <div className="p-4 mb-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-2 text-red-400">
             <AlertCircle size={20} />
             <span>{summaryError}</span>
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {summaryLoading ? (
             Array(4)
               .fill(0)
               .map((_, i) => (
-                <div key={i} className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm h-32 animate-pulse flex flex-col justify-between">
+                <div key={i} className="bg-[#1A1A1A] border border-[#272727] p-5 rounded-2xl animate-pulse h-32 flex flex-col justify-between">
                   <div className="flex justify-between items-center">
-                    <div className="h-4 bg-slate-200 rounded w-24"></div>
-                    <div className="h-8 w-8 bg-slate-200 rounded-full"></div>
+                    <div className="h-4 bg-[#272727] rounded w-24"></div>
+                    <div className="h-8 w-8 bg-[#272727] rounded-lg"></div>
                   </div>
-                  <div className="h-8 bg-slate-200 rounded w-16"></div>
+                  <div className="h-8 bg-[#272727] rounded w-16"></div>
                 </div>
               ))
           ) : summary ? (
             <>
               {/* Card 1: Total Views */}
-              <div className="bg-white border border-slate-150 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-medium text-sm">Total Views</span>
-                  <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.15 }}
+                className="bg-[#1A1A1A] border border-[#272727] rounded-2xl p-5"
+              >
+                <div className="flex justify-between items-start">
+                  <span className="text-[#AAAAAA] text-sm">Total Views</span>
+                  <div className="icon bg-[#FF0000]/10 text-[#FF0000] rounded-xl p-2">
                     <Eye size={20} />
                   </div>
                 </div>
-                <h3 className="text-3xl font-bold text-slate-950 mt-4 leading-none">
+                <h3 className="text-white text-3xl font-bold mt-2 leading-none">
                   {summary.totalViews.toLocaleString()}
                 </h3>
-              </div>
+                <p className="text-[#606060] text-xs mt-1">Total channel views</p>
+              </motion.div>
 
               {/* Card 2: Watch Time */}
-              <div className="bg-white border border-slate-150 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-medium text-sm">Watch Time</span>
-                  <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.15 }}
+                className="bg-[#1A1A1A] border border-[#272727] rounded-2xl p-5"
+              >
+                <div className="flex justify-between items-start">
+                  <span className="text-[#AAAAAA] text-sm">Watch Time</span>
+                  <div className="icon bg-purple-500/10 text-purple-400 rounded-xl p-2">
                     <Clock size={20} />
                   </div>
                 </div>
-                <h3 className="text-3xl font-bold text-slate-950 mt-4 leading-none">
+                <h3 className="text-white text-3xl font-bold mt-2 leading-none">
                   {summary.totalWatchTimeHours.toFixed(1)} hrs
                 </h3>
-              </div>
+                <p className="text-[#606060] text-xs mt-1">Lifetime hours</p>
+              </motion.div>
 
               {/* Card 3: Subscribers */}
-              <div className="bg-white border border-slate-150 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-medium text-sm">Subscribers</span>
-                  <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.15 }}
+                className="bg-[#1A1A1A] border border-[#272727] rounded-2xl p-5"
+              >
+                <div className="flex justify-between items-start">
+                  <span className="text-[#AAAAAA] text-sm">Subscribers</span>
+                  <div className="icon bg-blue-500/10 text-blue-400 rounded-xl p-2">
                     <Users size={20} />
                   </div>
                 </div>
-                <h3 className="text-3xl font-bold text-slate-950 mt-4 leading-none">
+                <h3 className="text-white text-3xl font-bold mt-2 leading-none">
                   {summary.totalSubscribers.toLocaleString()}
                 </h3>
-              </div>
+                <p className="text-[#606060] text-xs mt-1">Active subscribers</p>
+              </motion.div>
 
               {/* Card 4: Videos */}
-              <div className="bg-white border border-slate-150 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-medium text-sm">Published Videos</span>
-                  <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.15 }}
+                className="bg-[#1A1A1A] border border-[#272727] rounded-2xl p-5"
+              >
+                <div className="flex justify-between items-start">
+                  <span className="text-[#AAAAAA] text-sm">Published Videos</span>
+                  <div className="icon bg-green-500/10 text-green-400 rounded-xl p-2">
                     <Video size={20} />
                   </div>
                 </div>
-                <h3 className="text-3xl font-bold text-slate-950 mt-4 leading-none">
+                <h3 className="text-white text-3xl font-bold mt-2 leading-none">
                   {summary.publishedVideoCount.toLocaleString()}
                 </h3>
-              </div>
+                <p className="text-[#606060] text-xs mt-1">Uploaded videos</p>
+              </motion.div>
             </>
           ) : (
-            <div className="col-span-4 bg-white p-6 rounded-2xl text-center text-slate-400">
+            <div className="col-span-4 bg-[#1A1A1A] border border-[#272727] p-6 rounded-2xl text-center text-[#AAAAAA]">
               No summary data available.
             </div>
           )}
@@ -268,22 +298,23 @@ export default function Dashboard() {
       </div>
 
       {/* SECTION 2: Views Over Time (Line Chart) */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <div className="bg-[#1A1A1A] border border-[#272727] rounded-2xl p-5 mb-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Views Over Time</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Audience watch patterns and visual counts • {periodLabel(viewsPeriod)}</p>
+            <h2 className="text-white font-medium mb-1">Views Over Time</h2>
+            <p className="text-[#606060] text-xs">Audience watch patterns and visual counts</p>
           </div>
-          {/* Period Toggles */}
-          <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
-            {["week", "month", "year"].map((p) => (
+          
+          {/* PERIOD TOGGLE BUTTONS */}
+          <div className="flex gap-2">
+            {['week', 'month', 'year'].map((p) => (
               <button
                 key={p}
                 onClick={() => setViewsPeriod(p)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
+                className={`px-4 py-1.5 rounded-full text-sm font-medium capitalize transition-colors ${
                   viewsPeriod === p
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-800"
+                    ? 'bg-[#FF0000] text-white'
+                    : 'bg-[#272727] text-[#AAAAAA] hover:bg-[#383838] hover:text-white'
                 }`}
               >
                 {p}
@@ -294,7 +325,7 @@ export default function Dashboard() {
 
         {viewsLoading ? (
           <div className="flex items-center justify-center h-[300px]">
-            <Loader2 className="animate-spin text-blue-500" size={32} />
+            <Loader2 className="animate-spin text-[#FF0000]" size={32} />
           </div>
         ) : viewsError ? (
           <div className="flex flex-col items-center justify-center h-[300px] text-red-500 gap-2">
@@ -302,36 +333,33 @@ export default function Dashboard() {
             <span>{viewsError}</span>
           </div>
         ) : viewsData.length === 0 ? (
-          <div className="flex items-center justify-center h-[300px] text-slate-400">
+          <div className="flex items-center justify-center h-[300px] text-[#AAAAAA]">
             No views record found for this period.
           </div>
         ) : (
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={viewsData} margin={{ left: -10, right: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#272727" />
                 <XAxis
                   dataKey="date"
                   tickFormatter={formatDateLabel}
-                  stroke="#94a3b8"
-                  fontSize={11}
-                  fontWeight={500}
+                  stroke="#AAAAAA"
+                  tick={{ fill: '#AAAAAA', fontSize: 12 }}
                 />
                 <YAxis
                   yAxisId="left"
                   orientation="left"
                   stroke="#3B82F6"
-                  fontSize={11}
-                  fontWeight={500}
+                  tick={{ fill: '#AAAAAA', fontSize: 12 }}
                 />
                 <YAxis
                   yAxisId="right"
                   orientation="right"
                   stroke="#F59E0B"
-                  fontSize={11}
-                  fontWeight={500}
+                  tick={{ fill: '#AAAAAA', fontSize: 12 }}
                 />
-                <Tooltip />
+                <Tooltip contentStyle={tooltipContentStyle} />
                 <Legend verticalAlign="top" height={36} iconType="circle" />
                 <Line
                   yAxisId="left"
@@ -358,23 +386,25 @@ export default function Dashboard() {
       </div>
 
       {/* SECTION 3: Two Side-by-Side Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Left: Subscriber Growth */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+        <div className="bg-[#1A1A1A] border border-[#272727] rounded-2xl p-5 flex flex-col justify-between">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Subscriber Growth</h2>
-              <p className="text-xs text-slate-500 mt-0.5">New channels subscribers count • {periodLabel(subPeriod)}</p>
+              <h2 className="text-white font-medium mb-1">Subscriber Growth</h2>
+              <p className="text-[#606060] text-xs">{periodLabel(subPeriod)}</p>
             </div>
-            <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
+            
+            {/* Period Toggles */}
+            <div className="flex gap-2">
               {["week", "month", "year"].map((p) => (
                 <button
                   key={p}
                   onClick={() => setSubPeriod(p)}
-                  className={`px-3 py-1 rounded-lg text-[11px] font-semibold capitalize transition-all ${
+                  className={`px-3 py-1 rounded-full text-xs font-semibold capitalize transition-all ${
                     subPeriod === p
-                      ? "bg-white text-blue-600 shadow-sm"
-                      : "text-slate-500 hover:text-slate-800"
+                      ? "bg-[#FF0000] text-white"
+                      : "bg-[#272727] text-[#AAAAAA] hover:bg-[#383838] hover:text-white"
                   }`}
                 >
                   {p}
@@ -385,7 +415,7 @@ export default function Dashboard() {
 
           {subLoading ? (
             <div className="flex items-center justify-center h-[250px]">
-              <Loader2 className="animate-spin text-blue-500" size={32} />
+              <Loader2 className="animate-spin text-[#FF0000]" size={32} />
             </div>
           ) : subError ? (
             <div className="flex flex-col items-center justify-center h-[250px] text-red-500 gap-2">
@@ -393,22 +423,22 @@ export default function Dashboard() {
               <span>{subError}</span>
             </div>
           ) : subData.length === 0 ? (
-            <div className="flex items-center justify-center h-[250px] text-slate-400">
+            <div className="flex items-center justify-center h-[250px] text-[#AAAAAA]">
               No subscription records for this period.
             </div>
           ) : (
             <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={subData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#272727" />
                   <XAxis
                     dataKey="date"
                     tickFormatter={formatDateLabel}
-                    stroke="#94a3b8"
-                    fontSize={10}
+                    stroke="#AAAAAA"
+                    tick={{ fill: '#AAAAAA', fontSize: 12 }}
                   />
-                  <YAxis stroke="#94a3b8" fontSize={10} />
-                  <Tooltip />
+                  <YAxis stroke="#AAAAAA" tick={{ fill: '#AAAAAA', fontSize: 12 }} />
+                  <Tooltip contentStyle={tooltipContentStyle} />
                   <Bar
                     dataKey="newSubscribers"
                     fill="#3B82F6"
@@ -422,12 +452,12 @@ export default function Dashboard() {
         </div>
 
         {/* Right: Traffic Sources */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+        <div className="bg-[#1A1A1A] border border-[#272727] rounded-2xl p-5 flex flex-col justify-between">
           <div className="mb-4">
-            <h2 className="text-lg font-bold text-slate-900">Traffic Sources</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Top-performing video redirection channels</p>
+            <h2 className="text-white font-medium mb-1">Traffic Sources</h2>
+            <p className="text-[#606060] text-xs">Top-performing video redirection channels</p>
             {trafficVideoTitle && (
-              <p className="text-xs text-slate-700 mt-1.5 font-medium truncate" title={trafficVideoTitle}>
+              <p className="text-xs text-[#AAAAAA] mt-1.5 font-medium truncate" title={trafficVideoTitle}>
                 Source: {trafficVideoTitle}
               </p>
             )}
@@ -435,7 +465,7 @@ export default function Dashboard() {
 
           {trafficLoading ? (
             <div className="flex items-center justify-center h-[250px]">
-              <Loader2 className="animate-spin text-blue-500" size={32} />
+              <Loader2 className="animate-spin text-[#FF0000]" size={32} />
             </div>
           ) : trafficError ? (
             <div className="flex flex-col items-center justify-center h-[250px] text-red-500 gap-2">
@@ -443,7 +473,7 @@ export default function Dashboard() {
               <span>{trafficError}</span>
             </div>
           ) : trafficSources.length === 0 ? (
-            <div className="flex items-center justify-center h-[250px] text-slate-400">
+            <div className="flex items-center justify-center h-[250px] text-[#AAAAAA]">
               No traffic sources data found. Upload and play a video first!
             </div>
           ) : (
@@ -466,12 +496,12 @@ export default function Dashboard() {
                         <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip contentStyle={tooltipContentStyle} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
               {/* Custom Legend */}
-              <div className="flex justify-center gap-4 text-xs font-semibold text-slate-600 flex-wrap">
+              <div className="flex justify-center gap-4 text-xs font-semibold text-[#AAAAAA] flex-wrap">
                 {trafficSources.map((entry, index) => (
                   <div key={entry.source} className="flex items-center gap-1.5">
                     <span
@@ -488,15 +518,14 @@ export default function Dashboard() {
       </div>
 
       {/* SECTION 4: Top Videos Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-100">
-          <h2 className="text-lg font-bold text-slate-900">Video Performance</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Retention and engagement rates for top 10 published videos</p>
+      <div className="bg-[#1A1A1A] border border-[#272727] rounded-2xl overflow-hidden">
+        <div className="p-5 border-b border-[#272727]">
+          <h2 className="text-white font-medium">Top Videos</h2>
         </div>
 
         {topVideosLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="animate-spin text-blue-500" size={32} />
+            <Loader2 className="animate-spin text-[#FF0000]" size={32} />
           </div>
         ) : topVideosError ? (
           <div className="p-6 text-center text-red-500 flex flex-col items-center gap-2">
@@ -504,65 +533,54 @@ export default function Dashboard() {
             <span>{topVideosError}</span>
           </div>
         ) : topVideos.length === 0 ? (
-          <div className="py-20 text-center text-slate-400">No videos uploaded yet.</div>
+          <div className="py-20 text-center text-[#AAAAAA]">No videos uploaded yet.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/55 text-xs font-bold text-slate-500 uppercase">
-                  <th className="px-6 py-4">Video</th>
-                  <th className="px-6 py-4 text-right">Views</th>
-                  <th className="px-6 py-4 text-right">Avg Watch Time</th>
-                  <th className="px-6 py-4 text-right">Completion Rate</th>
-                  <th className="px-6 py-4 text-right">Likes</th>
-                  <th className="px-6 py-4 text-right">Comments</th>
+                <tr className="border-b border-[#272727]">
+                  <th className="text-left p-4 text-[#AAAAAA] text-xs font-medium">Video</th>
+                  <th className="text-right p-4 text-[#AAAAAA] text-xs font-medium">Views</th>
+                  <th className="text-right p-4 text-[#AAAAAA] text-xs font-medium">Watch Time</th>
+                  <th className="text-right p-4 text-[#AAAAAA] text-xs font-medium">Completion</th>
+                  <th className="text-right p-4 text-[#AAAAAA] text-xs font-medium">Likes</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {topVideos.map((video) => (
-                  <tr
+              <tbody>
+                {topVideos.map(video => (
+                  <motion.tr
                     key={video._id}
-                    onClick={() => navigate(`/Home/dashboard/video/${video._id}`)}
-                    className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
+                    onClick={() => navigate(`/youtube/dashboard/video/${video._id}`)}
+                    whileHover={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+                    className="border-b border-[#1F1F1F] cursor-pointer"
                   >
-                    {/* Thumbnail & Title */}
-                    <td className="px-6 py-4 flex items-center gap-4">
-                      <img
-                        src={video.thumbnail}
-                        alt=""
-                        className="w-[60px] h-[40px] rounded-lg object-cover bg-slate-100 flex-shrink-0 shadow-sm border border-slate-100"
-                      />
-                      <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1 max-w-[280px]">
-                        {video.title}
-                      </span>
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <img src={video.thumbnail} className="w-16 h-9 rounded-lg object-cover" />
+                        <span className="text-white text-sm line-clamp-2">{video.title}</span>
+                      </div>
                     </td>
-                    {/* Views */}
-                    <td className="px-6 py-4 text-right font-semibold text-slate-700">
+                    <td className="p-4 text-right text-[#AAAAAA] text-sm">
                       {video.totalViews?.toLocaleString() || 0}
                     </td>
-                    {/* Avg Watch */}
-                    <td className="px-6 py-4 text-right text-slate-600">
-                      {video.avgWatchDuration ? `${Math.round(video.avgWatchDuration)}s` : "0s"}
+                    <td className="p-4 text-right text-[#AAAAAA] text-sm">
+                      {video.avgWatchDuration ? `${Math.floor(video.avgWatchDuration)}s` : "0s"}
                     </td>
-                    {/* Completion % */}
-                    <td className="px-6 py-4 text-right">
-                      <span className="px-2.5 py-1 bg-blue-50 text-blue-700 font-semibold rounded-full text-xs">
-                        {video.avgCompletionRate
-                          ? `${(video.avgCompletionRate * 100).toFixed(1)}%`
-                          : "0%"}
-                      </span>
+                    <td className="p-4 text-right text-[#AAAAAA] text-sm">
+                      {video.avgCompletionRate
+                        ? `${(video.avgCompletionRate * 100).toFixed(1)}%`
+                        : "0.0%"}
                     </td>
-                    {/* Likes */}
-                    <td className="px-6 py-4 text-right text-slate-600">{video.likeCount || 0}</td>
-                    {/* Comments */}
-                    <td className="px-6 py-4 text-right text-slate-600">{video.commentCount || 0}</td>
-                  </tr>
+                    <td className="p-4 text-right text-[#AAAAAA] text-sm">
+                      {video.likeCount || 0}
+                    </td>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

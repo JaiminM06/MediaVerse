@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
 import axios from "axios";
@@ -100,16 +101,26 @@ export default function TwitterFeed() {
   };
 
   return (
-    <div className="space-y-4">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2 }}
+    >
+      {/* Header */}
+      <div className="sticky top-0 z-10 px-4 py-3 bg-[var(--tw-surface)]/80 backdrop-blur-xl border-b border-[var(--tw-border)]">
+        <h1 className="text-xl font-bold text-white">Home</h1>
+      </div>
+
+      {/* Composer */}
       {currentUserId && (
-        <div className="mb-4">
+        <div className="px-4 py-3 border-b border-[var(--tw-border)]">
           <TweetComposer onTweetPosted={handleTweetPosted} quoteTweetId={quoteTweetId} />
           {quoteTweetId && (
             <div className="mt-2 flex justify-end">
               <button
                 type="button"
                 onClick={() => setQuoteTweetId(null)}
-                className="text-xs text-red-500 hover:underline"
+                className="text-xs text-red-400 hover:underline"
               >
                 Cancel Quote
               </button>
@@ -118,12 +129,13 @@ export default function TwitterFeed() {
         </div>
       )}
 
-      <div className="divide-y divide-[#EFF3F4] bg-white overflow-hidden">
+      {/* Tweets */}
+      <div>
         {tweets.map((tweet) => (
           <TweetCard
             key={tweet._id}
             tweet={tweet}
-            variant="light"
+            currentUserId={currentUserId}
             onQuote={(id) => setQuoteTweetId(id)}
           />
         ))}
@@ -131,25 +143,25 @@ export default function TwitterFeed() {
 
       {loading && (
         <div className="py-8 flex justify-center">
-          <Loader2 className="animate-spin text-[#1DA1F2]" size={32} />
+          <Loader2 className="animate-spin text-[var(--tw-primary)]" size={28} />
         </div>
       )}
 
       {!loading && tweets.length === 0 && !error && (
-        <div className="text-center py-12 px-4 border border-[#EFF3F4] bg-white">
-          <p className="text-[#536471] text-sm font-medium">
+        <div className="text-center py-16 px-4">
+          <p className="text-[var(--tw-text-secondary)] text-sm">
             No posts yet. Follow people or be the first to post!
           </p>
         </div>
       )}
 
       {error && (
-        <div className="p-4 border border-red-100 bg-red-50 rounded-xl text-center">
-          <p className="text-red-600 text-sm font-medium mb-3">{error}</p>
+        <div className="p-4 mx-4 mt-4 border border-red-500/20 bg-red-500/10 rounded-2xl text-center">
+          <p className="text-red-400 text-sm font-medium mb-3">{error}</p>
           <button
             type="button"
             onClick={() => fetchTweets(page, tweets.length === 0)}
-            className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-full transition-colors"
+            className="px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-full transition-colors"
           >
             Retry
           </button>
@@ -157,6 +169,6 @@ export default function TwitterFeed() {
       )}
 
       {hasMore && !loading && <div ref={loaderRef} className="h-4" aria-hidden="true" />}
-    </div>
+    </motion.div>
   );
 }

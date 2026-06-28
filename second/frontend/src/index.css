@@ -3,27 +3,90 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* YouTube Platform Colors */
+    --yt-primary: #FF0000;
+    --yt-primary-hover: #CC0000;
+    --yt-secondary: #282828;
+    --yt-surface: #0F0F0F;
+    --yt-card: #1A1A1A;
+    --yt-border: #272727;
+    --yt-text: #FFFFFF;
+    --yt-text-secondary: #AAAAAA;
+    --yt-text-muted: #606060;
+
+    /* Twitter Platform Colors */
+    --tw-primary: #1DA1F2;
+    --tw-primary-hover: #1A8CD8;
+    --tw-secondary: #16181C;
+    --tw-surface: #000000;
+    --tw-card: #16181C;
+    --tw-border: #2F3336;
+    --tw-text: #E7E9EA;
+    --tw-text-secondary: #71767B;
+    --tw-green: #00BA7C;
+    --tw-pink: #F91880;
+
+    /* Shared */
+    --radius: 12px;
+    --transition: 150ms ease;
+  }
+
   html {
     scroll-behavior: smooth;
   }
+
   body {
-    @apply bg-gray-50 text-slate-900 font-sans antialiased;
+    @apply bg-[#0F0F0F] text-white antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
+  /* Custom Scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
   }
   ::-webkit-scrollbar-track {
     @apply bg-transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
+    @apply bg-white/10 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-white/20;
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.1) transparent;
   }
 }
 
 @layer utilities {
   .animate-fadeIn {
     animation: fadeIn 0.2s ease-out;
+  }
+
+  .bg-grid-pattern {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, #fff 0%, #aaa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glow-red {
+    box-shadow: 0 0 60px rgba(255, 0, 0, 0.15);
+  }
+
+  .glow-blue {
+    box-shadow: 0 0 60px rgba(29, 161, 242, 0.15);
   }
 }
 
@@ -36,4 +99,13 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
 }

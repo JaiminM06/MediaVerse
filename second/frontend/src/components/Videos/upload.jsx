@@ -1,16 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
-import { Upload, CloudUpload, Film, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Film, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function VideoUpload() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [tags, setTags] = useState("");
   const [videoFile, setVideoFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processingStatus, setProcessingStatus] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  
   const pollRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -54,7 +57,7 @@ export default function VideoUpload() {
           fileSize: videoFile.size,
           title,
           description,
-          tags: ["hls"]
+          tags: tags.split(",").map(t => t.trim()).filter(Boolean)
         },
         { withCredentials: true }
       );
@@ -104,6 +107,7 @@ export default function VideoUpload() {
             // Reset form
             setTitle("");
             setDescription("");
+            setTags("");
             setVideoFile(null);
             if (fileInputRef.current) fileInputRef.current.value = '';
             setUploadProgress(0);
@@ -129,55 +133,74 @@ export default function VideoUpload() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 bg-gray-50/50">
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Upload className="text-brand-600" /> Upload HLS Video
-          </h2>
-          <p className="text-slate-500 mt-1">Direct-to-S3 secure uploads with automated HLS transcoding</p>
-        </div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2 }}
+      className="bg-[#0F0F0F] min-h-screen p-6"
+    >
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-white text-2xl font-bold mb-8">Upload Video</h1>
 
-        <div className="p-8">
+        <div className="bg-[#1A1A1A] border border-[#272727] rounded-2xl p-8">
           {error && (
-            <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl flex items-center gap-3 border border-red-100">
-              <AlertCircle size={20} />
-              {error}
+            <div className="mb-6 p-4 bg-[#FF0000]/10 text-[#FF0000] rounded-xl flex items-center gap-3 border border-[#FF0000]/20 text-sm">
+              <AlertCircle size={20} className="shrink-0" />
+              <div className="flex-1">{error}</div>
             </div>
           )}
+          
           {message && (
-            <div className="mb-6 p-4 bg-green-50 text-green-700 rounded-xl flex items-center gap-3 border border-green-100">
-              <CheckCircle size={20} />
-              {message}
+            <div className="mb-6 p-4 bg-green-500/10 text-green-400 rounded-xl flex items-center gap-3 border border-green-500/20 text-sm">
+              <CheckCircle size={20} className="shrink-0" />
+              <div className="flex-1">{message}</div>
             </div>
           )}
 
+          {/* Upload Progress / Status */}
           {uploading && (
-            <div className="mb-6 p-4 bg-brand-50 border border-brand-100 rounded-xl space-y-3">
-              <div className="flex justify-between items-center text-sm font-semibold text-brand-800">
-                <span className="flex items-center gap-2">
-                  <Loader2 size={16} className="animate-spin text-brand-600" />
-                  {processingStatus}
-                </span>
-                {uploadProgress > 0 && uploadProgress <= 100 && (
-                  <span className="text-brand-700">{uploadProgress}%</span>
+            <div className="mb-6 bg-[#1F1F1F] border border-[#272727] rounded-xl p-4 space-y-4">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                {processingStatus === "Ready" ? (
+                  <span className="text-green-400 flex items-center gap-2">
+                    ✅ Video is ready!
+                  </span>
+                ) : processingStatus === "Failed" ? (
+                  <span className="text-red-400 flex items-center gap-2">
+                    ❌ Processing failed.
+                  </span>
+                ) : processingStatus.toLowerCase().includes("transcoding") || processingStatus.toLowerCase().includes("process") ? (
+                  <span className="text-yellow-400 flex items-center gap-2">
+                    ⚙️ <Loader2 className="animate-spin" size={16} /> Processing video...
+                  </span>
+                ) : (
+                  <span className="text-[#AAAAAA] flex items-center gap-2">
+                    🔄 {processingStatus || "Uploading to server..."}
+                  </span>
                 )}
               </div>
-              {uploadProgress > 0 && uploadProgress <= 100 && (
-                <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                  <div 
-                    className="bg-brand-600 h-2 rounded-full transition-all duration-300" 
-                    style={{ width: `${uploadProgress}%` }}
-                  />
+
+              {uploadProgress > 0 && uploadProgress < 100 && (
+                <div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-white text-sm font-medium">Uploading...</span>
+                    <span className="text-[#AAAAAA] text-sm">{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-[#272727] rounded-full h-2 overflow-hidden">
+                    <motion.div
+                      className="bg-[#FF0000] h-2 rounded-full"
+                      animate={{ width: `${uploadProgress}%` }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          <form onSubmit={handleUpload} className="space-y-8">
-            {/* Video File Input */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Video File</label>
+          <form onSubmit={handleUpload}>
+            {/* File Drop Zone (shown before file selected) */}
+            {!videoFile ? (
               <div className="relative group">
                 <input
                   ref={fileInputRef}
@@ -190,75 +213,104 @@ export default function VideoUpload() {
                 />
                 <label
                   htmlFor="video-upload"
-                  className={`flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-xl transition-all cursor-pointer bg-slate-50
-                        ${videoFile ? 'border-brand-500 bg-brand-50/30' : 'border-slate-300 hover:border-brand-400 hover:bg-brand-50/30'}`}
+                  className="border-2 border-dashed border-[#383838] rounded-xl p-12 flex flex-col items-center justify-center text-center hover:border-[#FF0000] hover:bg-[#FF0000]/5 transition-colors cursor-pointer"
                 >
-                  {videoFile ? (
-                    <div className="text-center">
-                      <div className="w-16 h-16 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Film size={32} />
-                      </div>
-                      <p className="text-brand-700 font-medium text-lg">{videoFile.name}</p>
-                      <p className="text-brand-500 text-sm mt-1">Click to change video</p>
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <div className="w-16 h-16 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                        <CloudUpload size={32} />
-                      </div>
-                      <p className="text-slate-700 font-medium text-lg">Drag and drop video files to upload</p>
-                      <p className="text-slate-400 text-sm mt-1">Supports MP4, WEBM, and MOV (Max 500MB)</p>
-                    </div>
-                  )}
+                  <div className="text-5xl mb-4">🎬</div>
+                  <p className="text-white font-medium mb-1">Drag and drop video files to upload</p>
+                  <p className="text-[#AAAAAA] text-sm mb-4">Your videos will be private until you publish them</p>
+                  <span className="px-6 py-2.5 bg-[#FF0000] text-white rounded-full text-sm font-medium hover:bg-red-600 transition-colors inline-block">
+                    Select Files
+                  </span>
                 </label>
               </div>
-            </div>
+            ) : (
+              /* Form Fields (shown after file selected) */
+              <div className="space-y-4">
+                {/* Selected File Summary */}
+                <div className="flex items-center gap-3 bg-[#272727]/50 border border-[#383838] rounded-xl p-4">
+                  <div className="w-10 h-10 bg-[#FF0000]/10 text-[#FF0000] rounded-xl flex items-center justify-center shrink-0">
+                    <Film size={20} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium text-sm truncate">{videoFile.name}</p>
+                    <p className="text-[#AAAAAA] text-xs">
+                      {(videoFile.size / (1024 * 1024)).toFixed(1)} MB
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={uploading}
+                    onClick={() => {
+                      setVideoFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="text-[#AAAAAA] hover:text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                  >
+                    Change
+                  </button>
+                </div>
 
-            <div className="space-y-6">
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">Video Title</label>
-                <input
-                  type="text"
-                  placeholder="Give your video a catchy title"
-                  value={title}
-                  disabled={uploading}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400"
-                />
+                {/* Title */}
+                <div>
+                  <label className="text-[#AAAAAA] text-sm font-medium mb-2 block">Video Title</label>
+                  <input
+                    type="text"
+                    required
+                    disabled={uploading}
+                    placeholder="Give your video a catchy title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="bg-[#272727] border border-[#383838] rounded-lg text-white placeholder-[#606060] px-4 py-3 w-full focus:border-[#AAAAAA] focus:outline-none transition-colors"
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="text-[#AAAAAA] text-sm font-medium mb-2 block">Description</label>
+                  <textarea
+                    disabled={uploading}
+                    placeholder="Tell viewers about your video..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={4}
+                    className="bg-[#272727] border border-[#383838] rounded-lg text-white placeholder-[#606060] px-4 py-3 w-full focus:border-[#AAAAAA] focus:outline-none transition-colors resize-none"
+                  />
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="text-[#AAAAAA] text-sm font-medium mb-2 block">Tags (comma separated)</label>
+                  <input
+                    type="text"
+                    disabled={uploading}
+                    placeholder="e.g. gaming, tutorials, vlog"
+                    value={tags}
+                    onChange={(e) => setTags(e.target.value)}
+                    className="bg-[#272727] border border-[#383838] rounded-lg text-white placeholder-[#606060] px-4 py-3 w-full focus:border-[#AAAAAA] focus:outline-none transition-colors"
+                  />
+                </div>
+
+                {/* Submit button */}
+                <motion.button
+                  type="submit"
+                  whileTap={{ scale: 0.98 }}
+                  disabled={uploading || !videoFile || !title.trim()}
+                  className="w-full py-3 bg-[#FF0000] text-white rounded-full font-medium hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors mt-6"
+                >
+                  {uploading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 size={18} className="animate-spin" />
+                      Uploading...
+                    </span>
+                  ) : (
+                    "Publish Video"
+                  )}
+                </motion.button>
               </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">Description</label>
-                <textarea
-                  placeholder="Tell viewers about your video..."
-                  value={description}
-                  disabled={uploading}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={6}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100 flex justify-end">
-              <button
-                type="submit"
-                disabled={uploading}
-                className="bg-brand-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-brand-700 disabled:opacity-70 disabled:cursor-not-allowed transition-all shadow-lg shadow-brand-600/20 flex items-center gap-2"
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 size={20} className="animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  "Upload & Process"
-                )}
-              </button>
-            </div>
+            )}
           </form>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

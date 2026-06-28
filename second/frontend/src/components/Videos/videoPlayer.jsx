@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { ThumbsUp, ThumbsDown, Share2, Bookmark, User } from "lucide-react";
 import Hls from "hls.js";
+import { motion, AnimatePresence } from "framer-motion";
+import { formatTimeAgo } from "../../utils/formatTimeAgo.js";
 
 export default function VideoPlayer() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
@@ -26,6 +30,17 @@ export default function VideoPlayer() {
   const [levels, setLevels] = useState([]);
   const [currentQuality, setCurrentQuality] = useState("Auto");
   const [hlsInstance, setHlsInstance] = useState(null);
+
+  // COMMENTS STATE
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState("");
+  const [commentFocused, setCommentFocused] = useState(false);
+
+  // RELATED VIDEOS STATE
+  const [relatedVideos, setRelatedVideos] = useState([]);
+
+  // LOCAL LIKE COUNT
+  const [localLikeCount, setLocalLikeCount] = useState(0);
 
   useEffect(() => {
     const validSources = ['direct', 'search', 'recommended', 'external'];
@@ -85,10 +100,6 @@ export default function VideoPlayer() {
     }
   };
 
-  // COMMENTS STATE
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState("");
-
   useEffect(() => {
     const fetchVideo = async () => {
       try {
@@ -96,6 +107,7 @@ export default function VideoPlayer() {
           withCredentials: true,
         });
         setVideo(res.data.data);
+        setLocalLikeCount(res.data.data.likeCount || res.data.data.likes || 0);
 
         // Fetch subscription status
         try {
@@ -157,34 +169,90 @@ export default function VideoPlayer() {
     fetchComments();
   }, [id]);
 
+  // Fetch recommendations or fallback videos
+  useEffect(() => {
+    if (!id) return;
+    const fetchRelated = async () => {
+      try {
+        const res = await axios.get(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/recommendations/${id}`,
+          { withCredentials: true }
+        );
+        const data = res.data.data || [];
+        if (data.length > 0) {
+          setRelatedVideos(data);
+        } else {
+          const fallbackRes = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/videos`,
+            { params: { limit: 10 }, withCredentials: true }
+          );
+          setRelatedVideos(fallbackRes.data.data?.videos || fallbackRes.data.data || []);
+        }
+      } catch (err) {
+        console.error("Error fetching recommendations, fetching fallback videos:", err);
+        try {
+          const fallbackRes = await axios.get(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/videos`,
+            { params: { limit: 10 }, withCredentials: true }
+          );
+          setRelatedVideos(fallbackRes.data.data?.videos || fallbackRes.data.data || []);
+        } catch (fallbackErr) {
+          console.error("Error fetching fallback videos:", fallbackErr);
+        }
+      }
+    };
+    fetchRelated();
+  }, [id]);
+
   const handleLike = async () => {
+    const originalLiked = liked;
+    const originalDisliked = disliked;
+    const originalLikeCount = localLikeCount;
+
+    setLiked(!originalLiked);
+    setLocalLikeCount(prev => originalLiked ? Math.max(0, prev - 1) : prev + 1);
+    if (originalDisliked) setDisliked(false);
+
     try {
       await axios.post(
         `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/likes/toggle/v/${id}`,
         {},
         { withCredentials: true }
       );
-      setLiked(prev => !prev);
-      if (disliked) setDisliked(false);
     } catch (err) {
       console.error('Error toggling like:', err);
+      // Rollback
+      setLiked(originalLiked);
+      setLocalLikeCount(originalLikeCount);
+      setDisliked(originalDisliked);
     }
   };
 
   const handleDislike = async () => {
+    const originalLiked = liked;
+    const originalDisliked = disliked;
+    const originalLikeCount = localLikeCount;
+
+    if (originalLiked) {
+      setLiked(false);
+      setLocalLikeCount(prev => Math.max(0, prev - 1));
+    }
+    setDisliked(!originalDisliked);
+
     try {
-      // backend has no dislike — just remove like if liked
-      if (liked) {
+      if (originalLiked) {
         await axios.post(
           `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/likes/toggle/v/${id}`,
           {},
           { withCredentials: true }
         );
-        setLiked(false);
       }
-      setDisliked(prev => !prev);
     } catch (err) {
       console.error('Error toggling dislike:', err);
+      // Rollback
+      setLiked(originalLiked);
+      setLocalLikeCount(originalLikeCount);
+      setDisliked(originalDisliked);
     }
   };
 
@@ -271,203 +339,323 @@ export default function VideoPlayer() {
     };
   }, [id]);
 
-  if (loading) return (
-    <div className="flex items-center justify-center p-20">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
-    </div>
-  );
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
+  };
 
-  if (!video) return <div className="p-10 text-center text-red-500 font-bold">Video not found!</div>;
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
-      {/* Main Content: Video + Info */}
-      <div className="lg:col-span-2 space-y-6">
-
-        {/* Video Player Container */}
-        <div className="rounded-2xl overflow-hidden shadow-xl bg-black aspect-video relative group">
-          <video
-            ref={videoRef}
-            poster={video.thumbnail}
-            controls
-            onEnded={handleEnded}
-            onTimeUpdate={(e) => { currentTimeRef.current = e.target.currentTime; }}
-            onLoadedMetadata={(e) => { durationRef.current = e.target.duration; }}
-            className="w-full h-full object-contain"
-          />
-        </div>
-
-        {/* Quality Selector */}
-        {levels.length > 0 && (
-          <div className="flex items-center justify-between bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 shadow-sm">
-            <span className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
-              Adaptive Streaming Active
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-slate-500">Quality:</span>
-              <select
-                value={currentQuality}
-                onChange={handleQualityChange}
-                className="bg-white border border-slate-300 rounded-lg px-3 py-1 outline-none text-slate-800 font-semibold cursor-pointer shadow-sm hover:border-slate-400 transition-colors"
-              >
-                <option value="Auto">Auto</option>
-                {levels.map((level, index) => (
-                  <option key={index} value={index}>
-                    {level.height ? `${level.height}p` : `Variant ${index + 1}`}
-                  </option>
-                ))}
-              </select>
-            </div>
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6 bg-[#0F0F0F] min-h-screen">
+        {/* Left Column */}
+        <div className="lg:col-span-2 space-y-4 animate-pulse">
+          <div className="bg-[#272727] w-full aspect-video rounded-xl" />
+          <div className="bg-[#272727] h-6 w-3/4 rounded mt-3" />
+          <div className="flex justify-between items-center mt-3 border-b border-[#272727] pb-4">
+            <div className="bg-[#272727] h-4 w-1/4 rounded" />
+            <div className="bg-[#272727] h-8 w-1/4 rounded-full" />
           </div>
-        )}
-
-        {/* Video Details */}
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 leading-tight">{video.title}</h1>
-
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-4 border-b border-slate-200 pb-4">
-            {/* Channel Info */}
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-200 ring-2 ring-white shadow-sm">
-                <img src={avatar || "https://via.placeholder.com/50"} alt="Channel" className="w-full h-full object-cover" />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900">{video.owner?.username}</h3>
-                <p className="text-xs text-slate-500">{subscribers.toLocaleString()} subscribers</p>
-              </div>
-
-              <button
-                onClick={handleSubscribe}
-                className={`ml-4 px-5 py-2 rounded-full font-medium transition-all ${isSubscribed
-                    ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    : 'bg-brand-600 text-white hover:bg-brand-700 shadow-md shadow-brand-600/20'
-                  }`}
-              >
-                {isSubscribed ? "Subscribed" : "Subscribe"}
-              </button>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center bg-slate-100 rounded-full p-1 self-start md:self-auto">
-              <button
-                onClick={handleLike}
-                className={`flex items-center gap-2 px-4 py-2 rounded-l-full transition-colors ${liked ? "bg-slate-200 text-slate-900 font-medium" : "hover:bg-slate-200 text-slate-600"}`}
-              >
-                <ThumbsUp size={18} className={liked ? "fill-current" : ""} />
-                <span className="text-sm">Like</span>
-              </button>
-              <div className="w-px h-6 bg-slate-300"></div>
-              <button
-                onClick={handleDislike}
-                className={`flex items-center gap-2 px-4 py-2 rounded-r-full transition-colors ${disliked ? "bg-slate-200 text-slate-900" : "hover:bg-slate-200 text-slate-600"}`}
-              >
-                <ThumbsDown size={18} className={disliked ? "fill-current" : ""} />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 hidden md:flex">
-              <button className="p-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700">
-                <Share2 size={20} />
-              </button>
-              <button className="p-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700">
-                <Bookmark size={20} />
-              </button>
+          <div className="flex items-center gap-3 pt-2">
+            <div className="w-10 h-10 rounded-full bg-[#272727]" />
+            <div className="space-y-2 flex-1">
+              <div className="bg-[#272727] h-4 w-1/3 rounded" />
+              <div className="bg-[#272727] h-3 w-1/5 rounded" />
             </div>
           </div>
         </div>
-
-        {/* Description Box */}
-        <div className="bg-slate-100/50 rounded-xl p-4 text-sm text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer" onClick={() => setShowFullDesc(!showFullDesc)}>
-          <p className="font-bold mb-2 text-slate-900">
-            {video.views?.toLocaleString()} views • {new Date(video.createdAt).toLocaleDateString()}
-          </p>
-          <p className={`whitespace-pre-line ${!showFullDesc && 'line-clamp-3'}`}>
-            {video.description}
-          </p>
-          <button className="mt-2 font-medium text-slate-600 hover:text-slate-900">
-            {showFullDesc ? "Show less" : "Show more"}
-          </button>
-        </div>
-
-        {/* Comments Section (Mobile/Tablet View) */}
-        <div className="lg:hidden">
-          {/* ... duplicated comment logic if needed, but keeping it simple for now */}
-        </div>
-      </div>
-
-      {/* Sidebar: Comments (Desktop) */}
-      <div className="space-y-6">
-        {/* Comment Section Header */}
-        <div className="flex items-center gap-2 mb-4">
-          <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            Comments <span className="text-slate-500 font-normal text-base">{comments.length}</span>
-          </h3>
-        </div>
-
-        {/* Add Comment */}
-        <div className="flex gap-3 items-start">
-          <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold flex-shrink-0">
-            U
-          </div>
-          <div className="flex-1 space-y-2">
-            <input
-              type="text"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Add a comment..."
-              className="w-full border-b border-slate-300 focus:border-slate-800 outline-none py-2 bg-transparent text-sm transition-colors"
-            />
-            <div className="flex justify-end gap-2">
-              <button className="text-sm font-medium text-slate-600 hover:text-slate-800 px-3 py-1.5 rounded-full hover:bg-slate-100" onClick={() => setNewComment("")}>Cancel</button>
-              <button
-                disabled={!newComment.trim()}
-                onClick={handleAddComment}
-                className="text-sm font-medium bg-brand-600 text-white px-3 py-1.5 rounded-full hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Comment
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Comment List */}
-        <div className="space-y-6 mt-6">
-          {comments.map((comment) => (
-            <div key={comment._id} className="flex gap-3 group">
-              <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                {comment.owner?.avatar ? (
-                  <img src={comment.owner.avatar} alt="User" className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  <User size={20} className="text-slate-500" />
-                )}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm text-slate-900">{comment.owner?.username}</span>
-                  <span className="text-xs text-slate-500">
-                    {comment.createdAt
-                      ? new Date(comment.createdAt).toLocaleDateString('en-US', {
-                          month: 'short', day: 'numeric', year: 'numeric'
-                        })
-                      : ''}
-                  </span>
-                </div>
-                <p className="text-sm text-slate-800 mt-1">{comment.content}</p>
-
-                <div className="flex items-center gap-4 mt-2">
-                  <button className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900">
-                    <ThumbsUp size={14} /> <span>{comment.likes || 0}</span>
-                  </button>
-                  <button className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900">
-                    <ThumbsDown size={14} />
-                  </button>
-                </div>
+        {/* Right Column */}
+        <div className="hidden lg:block space-y-3 animate-pulse">
+          <div className="bg-[#272727] h-4 w-1/4 rounded mb-4" />
+          {Array(4).fill(0).map((_, idx) => (
+            <div key={idx} className="flex gap-2 p-2">
+              <div className="w-[168px] h-[94px] rounded-lg bg-[#272727] flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="bg-[#272727] h-3 w-full rounded" />
+                <div className="bg-[#272727] h-3 w-5/6 rounded" />
+                <div className="bg-[#272727] h-3 w-1/2 rounded" />
               </div>
             </div>
           ))}
         </div>
       </div>
-    </div>
+    );
+  }
+
+  if (!video) return <div className="p-10 text-center text-red-500 font-bold bg-[#0F0F0F] min-h-screen">Video not found!</div>;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="bg-[#0F0F0F] min-h-screen p-6"
+    >
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column (Main Video Player + Info + Comments) */}
+        <div className="lg:col-span-2 space-y-6 flex-1 min-w-0">
+          
+          {/* Video Player Container */}
+          <div className="relative bg-black w-full aspect-video rounded-xl overflow-hidden">
+            <video
+              ref={videoRef}
+              poster={video.thumbnail}
+              controls
+              onEnded={handleEnded}
+              onTimeUpdate={(e) => { currentTimeRef.current = e.target.currentTime; }}
+              onLoadedMetadata={(e) => { durationRef.current = e.target.duration; }}
+              className="w-full h-full"
+            />
+          </div>
+
+          {/* Quality Selector */}
+          {levels.length > 0 && (
+            <div className="flex items-center justify-between bg-[#1A1A1A] border border-[#272727] px-4 py-2.5 rounded-xl text-sm font-medium text-[#AAAAAA] shadow-sm">
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#00BA7C] animate-pulse"></span>
+                Adaptive Streaming Active
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[#AAAAAA]">Quality:</span>
+                <select
+                  value={currentQuality}
+                  onChange={handleQualityChange}
+                  className="bg-[#272727] border border-[#383838] rounded-lg px-2 py-1 outline-none text-white font-medium cursor-pointer hover:border-[#AAAAAA] transition-colors"
+                >
+                  <option value="Auto">Auto</option>
+                  {levels.map((level, index) => (
+                    <option key={index} value={index}>
+                      {level.height ? `${level.height}p` : `Variant ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Video Info Section */}
+          <div>
+            <h1 className="text-white text-xl font-semibold leading-tight mt-3">
+              {video.title}
+            </h1>
+
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-3 border-b border-[#272727] pb-4">
+              <span className="text-[#AAAAAA] text-sm">
+                {(video.views ?? 0).toLocaleString()} views • {formatDate(video.createdAt)}
+              </span>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <motion.button
+                  whileTap={{ scale: 1.3 }}
+                  animate={{ scale: liked ? [1, 1.3, 1] : 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                  onClick={handleLike}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    liked
+                      ? 'bg-[#FF0000]/20 text-[#FF0000] border border-[#FF0000]/40'
+                      : 'bg-[#272727] text-white hover:bg-[#383838]'
+                  }`}
+                >
+                  👍 {localLikeCount}
+                </motion.button>
+
+                <button
+                  onClick={handleDislike}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    disliked
+                      ? 'bg-white/20 text-[#FF0000] border border-white/10'
+                      : 'bg-[#272727] text-white hover:bg-[#383838]'
+                  }`}
+                >
+                  👎
+                </button>
+
+                <button className="bg-[#272727] text-white hover:bg-[#383838] rounded-full px-4 py-2 text-sm font-medium transition-colors flex items-center gap-1.5">
+                  <Share2 size={16} /> Share
+                </button>
+
+                <button className="bg-[#272727] text-white hover:bg-[#383838] rounded-full px-4 py-2 text-sm font-medium transition-colors flex items-center gap-1.5">
+                  <Bookmark size={16} /> Save
+                </button>
+              </div>
+            </div>
+
+            {/* Channel Info Row */}
+            <div className="flex items-center justify-between gap-4 mt-4">
+              <div className="flex items-center gap-3">
+                <img
+                  src={avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(video.owner?.username || "U")}&background=random`}
+                  alt="Channel"
+                  className="w-10 h-10 rounded-full object-cover bg-[#272727]"
+                />
+                <div>
+                  <h3 className="text-white font-medium text-sm">
+                    {video.owner?.username}
+                  </h3>
+                  <p className="text-[#AAAAAA] text-xs">
+                    {subscribers.toLocaleString()} subscribers
+                  </p>
+                </div>
+              </div>
+
+              <motion.button
+                whileTap={{ scale: 0.96 }}
+                onClick={handleSubscribe}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  isSubscribed
+                    ? 'bg-[#272727] text-white border border-[#383838] hover:bg-[#383838]'
+                    : 'bg-white text-black hover:bg-gray-200'
+                }`}
+              >
+                {isSubscribed ? "Subscribed" : "Subscribe"}
+              </motion.button>
+            </div>
+
+            {/* Collapsible Description Box */}
+            <div
+              onClick={() => setShowFullDesc(!showFullDesc)}
+              className="bg-[#272727] rounded-xl p-3 mt-3 text-[#AAAAAA] text-sm cursor-pointer hover:bg-[#323232] transition-colors"
+            >
+              <p className={`whitespace-pre-line leading-relaxed ${!showFullDesc ? 'line-clamp-3' : ''}`}>
+                {video.description}
+              </p>
+              <button className="text-white font-medium mt-1 hover:underline">
+                {showFullDesc ? "Show less" : "Show more"}
+              </button>
+            </div>
+          </div>
+
+          {/* Comments Section */}
+          <div className="pt-4">
+            <h3 className="text-white font-medium text-lg mb-4">
+              {comments.length} Comments
+            </h3>
+
+            {/* Comment Input Row */}
+            <div className="flex gap-3 items-start mb-6">
+              <div className="w-9 h-9 rounded-full bg-[#272727] text-white flex items-center justify-center font-bold flex-shrink-0">
+                U
+              </div>
+              <div className="flex-1">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  onFocus={() => setCommentFocused(true)}
+                  placeholder="Add a comment..."
+                  rows={2}
+                  className="w-full bg-transparent border-b border-[#272727] text-white placeholder-[#606060] text-sm resize-none focus:border-[#AAAAAA] outline-none pb-2 transition-colors"
+                />
+                {commentFocused && (
+                  <div className="flex justify-end gap-2 mt-2">
+                    <button
+                      onClick={() => {
+                        setNewComment("");
+                        setCommentFocused(false);
+                      }}
+                      className="px-4 py-1.5 text-white hover:bg-white/10 rounded-full text-sm font-medium transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      disabled={!newComment.trim()}
+                      onClick={async () => {
+                        await handleAddComment();
+                        setCommentFocused(false);
+                      }}
+                      className="px-4 py-1.5 bg-white text-black rounded-full text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Comment
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Comments List */}
+            <div className="space-y-4">
+              {comments.map((comment) => (
+                <div key={comment._id} className="flex gap-3 py-1">
+                  <img
+                    src={comment.owner?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.owner?.username || "U")}&background=random`}
+                    alt=""
+                    className="w-9 h-9 rounded-full object-cover bg-[#272727]"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-white text-sm">
+                        @{comment.owner?.username || "user"}
+                      </span>
+                      <span className="text-[#606060] text-xs">
+                        · {comment.createdAt ? formatTimeAgo(comment.createdAt) : ""}
+                      </span>
+                    </div>
+                    <p className="text-[#AAAAAA] text-sm leading-relaxed mt-1 whitespace-pre-line">
+                      {comment.content}
+                    </p>
+                    <div className="flex items-center gap-4 mt-2">
+                      <button className="flex items-center gap-1.5 text-[#AAAAAA] text-xs hover:text-white transition-colors">
+                        👍 {comment.likes || 0}
+                      </button>
+                      <button className="text-[#AAAAAA] text-xs hover:text-white transition-colors">
+                        Reply
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {comments.length === 0 && (
+                <p className="text-[#606060] text-sm text-center py-6">
+                  No comments yet. Be the first to share your thoughts!
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column (Related Videos Sidebar) */}
+        <div className="hidden lg:block space-y-4">
+          <h3 className="text-white font-medium text-sm mb-3">Up next</h3>
+          
+          <div className="space-y-3">
+            {relatedVideos.map((item) => (
+              <motion.div
+                key={item._id}
+                whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                className="flex gap-2 p-2 rounded-xl cursor-pointer transition-colors"
+                onClick={() => navigate(`/youtube/watch/${item._id}`)}
+              >
+                <img
+                  src={item.thumbnail}
+                  alt=""
+                  className="w-[168px] h-[94px] rounded-lg object-cover flex-shrink-0 bg-[#272727]"
+                />
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-white text-xs font-medium line-clamp-2 leading-snug">
+                    {item.title}
+                  </h4>
+                  <p className="text-[#AAAAAA] text-xs mt-1 truncate">
+                    {item.owner?.username || "Unknown Channel"}
+                  </p>
+                  <p className="text-[#AAAAAA] text-xs mt-0.5 truncate">
+                    {(item.views ?? 0).toLocaleString()} views • {formatTimeAgo(item.createdAt)}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+
+            {relatedVideos.length === 0 && (
+              <p className="text-[#606060] text-xs py-4 text-center">
+                No related videos found.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 }

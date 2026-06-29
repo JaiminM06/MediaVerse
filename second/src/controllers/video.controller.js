@@ -160,10 +160,19 @@ const getVideoById = asyncHandler(async (req, res) => {
         ).catch(err => logger.error({ err, videoId }, "WatchHistory upsert error"));
     }
 
+    const likeCount = await Like.countDocuments({ video: videoId });
+    const isLiked = req.user?._id
+        ? !!(await Like.exists({ video: videoId, likedBy: req.user._id }))
+        : false;
+
+    const videoData = video.toObject();
+    videoData.likeCount = likeCount;
+    videoData.isLiked = isLiked;
+
     return res
         .status(200)
         .json(
-            new ApiResponse(200, video, "video fetched successfully")
+            new ApiResponse(200, videoData, "video fetched successfully")
         )
 })
 

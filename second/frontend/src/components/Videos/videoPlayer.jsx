@@ -108,6 +108,7 @@ export default function VideoPlayer() {
         });
         setVideo(res.data.data);
         setLocalLikeCount(res.data.data.likeCount || res.data.data.likes || 0);
+        setLiked(!!res.data.data.isLiked);
 
         // Fetch subscription status
         try {

@@ -28,7 +28,7 @@ function UserPage() {
         setUser(userRes.data.data);
 
         // Determine which username's profile to view (defaults to own profile)
-        const targetUsername = username || userRes.data.data.username;
+        const targetUsername = (!username || username === "me") ? userRes.data.data.username : username;
 
         const profile = await axios.get(
           `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/users/c/${targetUsername}`,
@@ -51,7 +51,7 @@ function UserPage() {
 
         // Fetch target user's videos (pass target channel user ID to feed query)
         const videosRes = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/videos/`,
+          `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/videos`,
           {
             params: { userId: profile.data.data._id },
             withCredentials: true

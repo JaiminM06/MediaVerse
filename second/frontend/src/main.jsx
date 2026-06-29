@@ -8,7 +8,7 @@ import { API_BASE_URL } from './config/api.js'
 // Auth pages
 import Login from './components/Login/Login.jsx'
 import Register from './components/Register/Register.jsx'
-import PlatformSelector from './components/PlatformSelector.jsx'
+import LandingPage from './components/Landing/LandingPage.jsx'
 
 // Layouts
 import YouTubeLayout from './layouts/YouTubeLayout.jsx'
@@ -42,7 +42,18 @@ axios.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Skip interceptor entirely for requests that opt out (e.g. landing page session check)
+    if (originalRequest?._skipInterceptor) {
+      return Promise.reject(error);
+    }
+
+    if (
+      error.response?.status === 401 && 
+      !originalRequest._retry && 
+      !originalRequest.url?.includes("/users/login") && 
+      !originalRequest.url?.includes("/users/refresh-token") &&
+      !originalRequest.url?.includes("/users/current-user")
+    ) {
       originalRequest._retry = true;
 
       try {
@@ -53,7 +64,11 @@ axios.interceptors.response.use(
         );
         return axios(originalRequest);
       } catch (refreshError) {
-        window.location.href = '/login';
+        // Only redirect to /login if we're NOT on the landing page, login, or register
+        const path = window.location.pathname;
+        if (path !== '/' && path !== '/login' && path !== '/register') {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       }
     }
@@ -65,8 +80,8 @@ axios.interceptors.response.use(
 const router = createBrowserRouter(
   createRoutesFromElements(
     <>
-      {/* Platform Selector */}
-      <Route path='/' element={<PlatformSelector />} />
+      {/* Landing Page */}
+      <Route path='/' element={<LandingPage />} />
 
       {/* Auth (no layout) */}
       <Route path='/login' element={<Login />} />

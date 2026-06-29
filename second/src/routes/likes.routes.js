@@ -14,6 +14,10 @@ router
     .post(toggleVideoLike);
 
 router
+    .route("/toggle/v/:videoId")
+    .post(toggleVideoLike);
+
+router
     .route("/comment/:commentId")
     .post(toggleCommentLike);
     

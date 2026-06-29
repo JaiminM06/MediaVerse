@@ -1,128 +1,250 @@
-# MediaVerse
+# 🌌 MediaVerse (Unified Video & Social Architecture)
 
-> A full-stack YouTube + Twitter hybrid platform built as a portfolio project demonstrating
-> async video processing, real-time communication, full-text search, and creator analytics.
+[![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=Vite&logoColor=white)](https://vite.dev/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
+[![AWS S3](https://img.shields.io/badge/AWS_S3-569A31?style=for-the-badge&logo=amazons3&logoColor=white)](https://aws.amazon.com/s3/)
+[![Socket.io](https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socketdotio&logoColor=white)](https://socket.io/)
 
-## ✨ Features
+MediaVerse is a high-performance, dual-platform entertainment ecosystem that unifies a YouTube-grade video hosting and streaming service with a Twitter/X-style real-time microblogging feed. The architecture is engineered to support adaptive HLS video transcoding, low-latency search indices, real-time message routing, rate limiting, and robust error tracking.
 
-- 🎬 **Async video pipeline** — Upload → S3 → BullMQ queue → FFmpeg worker → HLS adaptive streaming
-- 📡 **Real-time** — Socket.IO with Redis Pub/Sub for live comments, viewer counts, notifications
-- 🔍 **Full-text search** — Typesense with fuzzy matching, autocomplete, typo tolerance
-- 📊 **Creator analytics** — Views, watch time, subscriber growth, traffic sources via MongoDB aggregations
-- 🤖 **Recommendations** — Content-based + collaborative filtering hybrid algorithm
-- 🔐 **Auth** — JWT access/refresh tokens, httpOnly cookies, bcrypt password hashing
-- 🛡️ **Production hardened** — Pino logging, Helmet, Zod validation, rate limiting, Docker, CI/CD
+---
 
-## 🏗️ Architecture
+## 🏛️ Comprehensive Architecture Diagram
+
+Below is the system architecture of MediaVerse, representing the flow of client requests, background jobs, database synchronization, caching layers, and storage gateways.
+
+```mermaid
+flowchart TB
+    %% Styling Definitions
+    classDef client fill:#0d9488,stroke:#0f766e,stroke-width:2px,color:#fff;
+    classDef ingress fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff;
+    classDef security fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#fff;
+    classDef app fill:#8b5cf6,stroke:#6d28d9,stroke-width:2px,color:#fff;
+    classDef broker fill:#f97316,stroke:#c2410c,stroke-width:2px,color:#fff;
+    classDef worker fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff;
+    classDef storage fill:#6b7280,stroke:#374151,stroke-width:2px,color:#fff;
+
+    %% Nodes
+    subgraph ClientLayer ["Client Layer (Frontend)"]
+        UI["React Client (Vite)"]:::client
+        WS_Client["Socket.io Client"]:::client
+    end
+
+    subgraph SecurityGate ["Security & Ingress Gateways"]
+        Proxy["Reverse Proxy (Nginx/Express Trust Proxy)"]:::ingress
+        RateLimiter["Redis-Based sliding window Rate Limiter"]:::security
+        HelmetHPP["Helmet Headers & HPP Middleware"]:::security
+        AuthCheck["JWT Cookies / Access Tokens Validation"]:::security
+    end
+
+    subgraph AppServers ["Application Processing Layer"]
+        NodeCluster["Node.js Cluster (Express Server)"]:::app
+        WS_Server["Socket.io WS Gateway Server"]:::app
+    end
+
+    subgraph BrokerLayer ["Event Broker & Queue Management"]
+        RedisStore["Redis Cache / Adapters"]:::broker
+        RedisPubSub["Redis WebSocket Adapter (Pub/Sub scaling)"]:::broker
+        BullQueue["BullMQ Job Queue (Video Transcoding Tasks)"]:::broker
+    end
+
+    subgraph BackgroundWorkers ["Background Worker Layer"]
+        VideoWorker["BullMQ Worker (fluent-ffmpeg Transcoder)"]:::worker
+        SearchIndexer["Typesense Index Sync Job"]:::worker
+    end
+
+    subgraph StorageLayer ["Systems of Record & Databases"]
+        MongoDB[("MongoDB (Primary DB of Record)")]:::storage
+        Typesense[("Typesense (Low-Latency Search Engine)")]:::storage
+        S3Bucket[("AWS S3 (Raw & Transcoded HLS Streams)")]:::storage
+        Cloudinary[("Cloudinary Media Assets Delivery")]:::storage
+    end
+
+    %% Flows & Connections
+    UI -->|HTTP Requests| Proxy
+    WS_Client -->|WebSockets Connection| Proxy
+    
+    Proxy --> RateLimiter
+    RateLimiter --> HelmetHPP
+    HelmetHPP --> AuthCheck
+    AuthCheck -->|Authorized Route| NodeCluster
+    AuthCheck -->|WS Handshake| WS_Server
+    
+    NodeCluster -->|Emit Events| RedisPubSub
+    WS_Server <-->|Sync State| RedisPubSub
+    
+    NodeCluster -->|Push Video Upload Job| BullQueue
+    BullQueue -->|Pulls Tasks| VideoWorker
+    
+    VideoWorker -->|Fetch Raw / Upload Transcoded HLS| S3Bucket
+    VideoWorker -->|Upload Image Assets| Cloudinary
+    
+    NodeCluster -->|Write / Query Metadata| MongoDB
+    NodeCluster -->|Sync Autocomplete Index| SearchIndexer
+    SearchIndexer -->|Push Search Indices| Typesense
+    
+    NodeCluster -->|Cache Profiles / Session Keys| RedisStore
+    NodeCluster -->|Query Index| Typesense
+    
+    %% Regional indicators
+    class UI,WS_Client client;
+    class Proxy ingress;
+    class RateLimiter,HelmetHPP,AuthCheck security;
+    class NodeCluster,WS_Server app;
+    class RedisStore,RedisPubSub,BullQueue broker;
+    class VideoWorker,SearchIndexer worker;
+    class MongoDB,Typesense,S3Bucket,Cloudinary storage;
+```
+
+---
+
+## 🔄 Core Request Lifecycles & Flows
+
+### 1. Video Processing & Transcoding Pipeline (HLS stream creation)
+When a creator uploads a video, MediaVerse processes the video asynchronously to support dynamic bitrate streaming:
+
+```mermaid
+gantt
+    title Video Transcoding Workflow (BullMQ + FFMPEG)
+    dateFormat  X
+    axisFormat %s sec
+    
+    section API Route
+    Client Upload Request     :active, 0, 3
+    S3 Upload Presign Creation : 3, 5
+    Client Direct Upload to S3 : 5, 12
+    Trigger Transcode Queue   :crit, 12, 14
+    
+    section BullMQ Queue
+    Job Enqueued (Wait State) : 14, 17
+    Worker Pulls Task         : 17, 18
+    
+    section FFMPEG Worker
+    Download Raw Source       : 18, 22
+    Create HLS Manifest (.m3u8): 22, 28
+    Create TS Segments (.ts)  : 28, 38
+    Upload Output Streams     : 38, 43
+    Update DB Status (Ready)  : 43, 45
+```
+
+### 2. WebSocket Real-Time Event Dispatch System
+Live interactions (tweets, replies, views, likes) travel through a distributed network synced via Redis:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Alice as Client A
+    actor Bob as Client B
+    participant App as Express Gateway
+    participant Redis as Redis Pub/Sub Adapter
+    participant DB as MongoDB
+    
+    Alice->>App: Action (e.g. Like Video / Post Reply)
+    rect rgb(30, 41, 59)
+        note right of App: Process inside Node Cluster
+        App->>DB: Mutate & Save Event
+        DB-->>App: Confirm Write
+    end
+    App->>Redis: Publish Event (Channel: mediaverse_events)
+    rect rgb(17, 24, 39)
+        note over Redis: Distribute to all scaling clusters
+        Redis-->>App: Broadcast to Room "video_123"
+    end
+    App-->>Bob: Emit socket event "new_like" / "new_reply"
+```
+
+---
+
+## ⚡ Technical Features & Design Choices
+
+*   **Dual Platforms**: Seamless transitions between MediaVerse Video (YouTube style, red accents) and MediaVerse X (Twitter style, blue accents) on a single session.
+*   **HLS Streaming**: Auto-segmentation of uploaded videos into adaptive HLS playlists (`.m3u8` and `.ts`) via background workers.
+*   **Low-Latency Search**: Autocomplete search indices synchronized with MongoDB documents and powered by Typesense.
+*   **Redis Middleware**: Dual-purpose Redis engine:
+    *   **Rate Limiting**: Sliding window rate limits that persist across proxy routing to prevent auth abuse lockouts.
+    *   **Adapter Scaling**: Redis adapter for Socket.io enabling scaling across multiple Node.js instances.
+*   **Security Architecture**: Cross-Origin Resource Sharing (CORS) configured with credentials support, Helmet header enforcement, and HPP parameter cleansing.
+*   **Telemetry**: Sentry error boundaries integrated inside backend routes and job workers to log exceptions automatically.
+
+---
+
+## 📂 Repository Directory Layout
 
 ```
-Client
-  │
-  ├── REST API (Express) ──► MongoDB (data)
-  │                      ──► Redis (cache + queue broker)
-  │                      ──► Typesense (search index)
-  │
-  ├── Socket.IO ──► Redis Pub/Sub ──► All connected clients
-  │
-  └── Video Upload Flow:
-        Pre-signed S3 URL ──► S3 Raw Bucket
-                          ──► BullMQ Job
-                          ──► FFmpeg Worker (transcode → HLS)
-                          ──► S3 Processed Bucket
-                          ──► CloudFront CDN ──► HLS.js Player
+.
+├── src/
+│   ├── app.js               # Express application initialization & middleware config
+│   ├── index.js             # API entrypoint, MongoDB connection, & server bind
+│   ├── config/              # Redis, Typesense, Sentry, & DB config files
+│   ├── controllers/         # Request handling logic (Users, Videos, Tweets, Likes, etc.)
+│   ├── middlewares/         # Auth guards, Rate limiters, Error wrappers, Uploads
+│   ├── models/              # Mongoose DB Schemas with indexes
+│   ├── routes/              # HTTP Route declarations
+│   ├── socket/              # Socket.io gateways & room managers
+│   └── workers/             # Transcoder & index sync background workers (BullMQ)
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # UI components (Landing Page, YouTube Feed, Twitter Feed)
+│   │   ├── layouts/         # Layout shells (YouTubeLayout, TwitterLayout)
+│   │   └── main.jsx         # React application shell & Axios response interceptor
+│   └── package.json         # React dependencies (Framer Motion, React Three Fiber, Recharts)
+├── docker-compose.yml       # Production-ready services orchestrator
+└── package.json             # Backend dependencies
 ```
 
-## 🛠️ Tech Stack
+---
 
-| Layer | Technology | Why |
-|-------|-----------|-----|
-| Runtime | Node.js 20 + Express 5 | Async I/O, production-proven |
-| Database | MongoDB + Mongoose | Flexible schema, rich aggregation pipelines |
-| Queue | BullMQ + Redis | Reliable async job processing with retries |
-| Storage | AWS S3 + CloudFront | Scalable object storage + global CDN |
-| Video | FFmpeg + HLS.js | Industry-standard transcoding + adaptive streaming |
-| Search | Typesense | Fast, typo-tolerant, self-hostable |
-| Real-time | Socket.IO + Redis adapter | Horizontally scalable WebSocket pub/sub |
-| Logging | Pino + pino-http | Fastest Node.js JSON logger |
-| Validation | Zod | Type-safe runtime schema validation |
-| Testing | Jest + Supertest | API integration tests |
-| CI/CD | GitHub Actions | Automated lint, test, Docker build |
-| Frontend | React + Tailwind + Recharts + HLS.js | Modern, responsive UI |
+## 🚀 Local Installation & Running
 
-## 🔑 Key Engineering Decisions
+### Prerequisites
+*   Node.js (v18+)
+*   MongoDB Instance
+*   Redis Cluster
+*   Typesense (optional for local mock search)
 
-**Why BullMQ over processing videos inline?**
-Video transcoding takes minutes. Doing it in the request/response cycle would time out
-and block the server. BullMQ decouples upload from processing — the user gets an immediate
-response and the worker transcodes asynchronously with automatic retry on failure.
+### Step 1: Clone and Configure Environments
+Create a `.env` file at the root:
+```env
+PORT=8000
+MONGODB_URI=mongodb://127.0.0.1:27017/mediaverse
+ACCESS_TOKEN_SECRET=your_access_token_secret
+REFRESH_TOKEN_SECRET=your_refresh_token_secret
+ACCESS_TOKEN_EXPIRY=1d
+REFRESH_TOKEN_EXPIRY=10d
 
-**Why Typesense over MongoDB Atlas Search?**
-MongoDB Atlas Search requires an M10+ cluster ($57/month). Typesense is open-source,
-self-hostable via Docker (free), and provides comparable fuzzy search with better
-autocomplete support. It also syncs from MongoDB via fire-and-forget hooks.
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
 
-**Why MongoDB over PostgreSQL?**
-MediaVerse has flexible, rapidly evolving schemas (video variants, analytics events,
-social graph). MongoDB's document model and aggregation pipeline made iterating faster
-than designing normalized SQL schemas upfront. For a portfolio project, the aggregation
-pipeline complexity (recommendations, analytics, trending) demonstrates advanced query skills.
+AWS_ACCESS_KEY_ID=your_aws_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret
+AWS_REGION=us-east-1
+S3_BUCKET_NAME=your_bucket_name
+```
 
-## 🚀 Local Setup
-
-Prerequisites: Docker, Node.js 20, FFmpeg (for worker)
-
+### Step 2: Spin Up Environment Containers
+If you have Docker installed, spin up all backing storage engines instantly:
 ```bash
-git clone <repo-url>
-cd mediaverse
-cp .env.example .env
-# Fill in your values in .env
+npm run docker:dev
+```
 
-# Start all services (MongoDB, Redis, Typesense, MinIO, API, Worker)
-docker-compose -f docker-compose.dev.yml up
-
-# Or run manually:
+### Step 3: Run the Services
+Run the Express backend API and background transcoding workers concurrently:
+```bash
+# Install root backend packages
 npm install
-npm run dev        # API server on :8000
-npm run worker     # Video processing worker (separate terminal)
+
+# Run Express + Workers
+npm run dev:all
 ```
 
-API docs: http://localhost:8000/api-docs
-Health:   http://localhost:8000/health
-
-## 🧪 Running Tests
-
+Run the React frontend client in a separate terminal:
 ```bash
-npm test                    # run all tests
-npm test -- --coverage      # with coverage report
-npm test -- --watch         # watch mode
+cd frontend
+npm install
+npm run dev
 ```
-
-## 📋 Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| PORT | No (default 8000) | API server port |
-| MONGODB_URI | Yes | MongoDB connection string |
-| JWT_SECRET | Yes | JWT signing secret |
-| JWT_ACCESS_EXPIRY | No (default 1d) | Access token expiry |
-| JWT_REFRESH_EXPIRY | No (default 10d) | Refresh token expiry |
-| REDIS_URL | Yes | Redis connection URL |
-| AWS_ACCESS_KEY_ID | Yes | AWS credentials |
-| AWS_SECRET_ACCESS_KEY | Yes | AWS credentials |
-| AWS_REGION | Yes | S3 bucket region |
-| AWS_S3_RAW_BUCKET | Yes | Bucket for raw video uploads |
-| AWS_S3_PROCESSED_BUCKET | Yes | Bucket for HLS output |
-| CLOUDFRONT_DOMAIN | Yes | CloudFront distribution domain |
-| TYPESENSE_HOST | Yes | Typesense server host |
-| TYPESENSE_PORT | Yes | Typesense server port |
-| TYPESENSE_API_KEY | Yes | Typesense API key |
-| TYPESENSE_PROTOCOL | No (default http) | http or https |
-| CLOUDINARY_CLOUD_NAME | Yes | Cloudinary (avatars/covers) |
-| CLOUDINARY_API_KEY | Yes | Cloudinary |
-| CLOUDINARY_API_SECRET | Yes | Cloudinary |
-| SENTRY_DSN | No | Sentry error tracking DSN |
-| LOG_LEVEL | No (default info) | Pino log level |
-| NODE_ENV | No (default development) | Environment |
-
-## 📄 License
-MIT
+Open `http://localhost:5173` to explore your unified media universe.

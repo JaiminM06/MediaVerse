@@ -43,16 +43,16 @@ describe('Tweet Controller', () => {
       Tweet.create.mockResolvedValue(saved);
       Tweet.findById.mockReturnValue({ populate: jest.fn().mockReturnThis(), then: (cb) => Promise.resolve(saved).then(cb) });
       const { res, next } = createMockRes();
-      tweetController.createTweet(makeReq({ user: { _id: 'u1', username: 'a' }, body: { content: 'hello' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await tweetController.createTweet(makeReq({ user: { _id: 'u1', username: 'a' }, body: { content: 'hello' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('forwards DB failures to next()', async () => {
       Tweet.create.mockRejectedValue(new Error('DB down'));
       const { res, next } = createMockRes();
-      tweetController.createTweet(makeReq({ user: { _id: 'u1' }, body: { content: 'hello' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await tweetController.createTweet(makeReq({ user: { _id: 'u1' }, body: { content: 'hello' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
@@ -63,8 +63,8 @@ describe('Tweet Controller', () => {
       Like.aggregate.mockResolvedValue([]);
       Like.find.mockReturnValue({ select: jest.fn().mockReturnThis(), lean: jest.fn().mockResolvedValue([]) });
       const { res, next } = createMockRes();
-      tweetController.getUserTweets(makeReq({ params: { userId: VID }, query: { page: '1', limit: '10' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await tweetController.getUserTweets(makeReq({ params: { userId: VID }, query: { page: '1', limit: '10' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -73,24 +73,24 @@ describe('Tweet Controller', () => {
     it('returns 200 on success', async () => {
       Tweet.findById.mockResolvedValue({ _id: VID, content: 'old', owner: 'u1', isRetweet: false, save: jest.fn().mockResolvedValue(true), populate: jest.fn().mockResolvedValue({ _id: VID, content: 'new' }) });
       const { res, next } = createMockRes();
-      tweetController.updateTweet(makeReq({ user: { _id: 'u1' }, params: { tweetId: VID }, body: { content: 'new content' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await tweetController.updateTweet(makeReq({ user: { _id: 'u1' }, params: { tweetId: VID }, body: { content: 'new content' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('returns 403 when not owner', async () => {
       Tweet.findById.mockResolvedValue({ _id: VID, owner: 'u2', isRetweet: false, save: jest.fn().mockResolvedValue(true) });
       const { res, next } = createMockRes();
-      tweetController.updateTweet(makeReq({ user: { _id: 'u1' }, params: { tweetId: VID }, body: { content: 'new' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await tweetController.updateTweet(makeReq({ user: { _id: 'u1' }, params: { tweetId: VID }, body: { content: 'new' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
 
     it('returns 404 when not found', async () => {
       Tweet.findById.mockResolvedValue(null);
       const { res, next } = createMockRes();
-      tweetController.updateTweet(makeReq({ user: { _id: 'u1' }, params: { tweetId: VID }, body: { content: 'new' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await tweetController.updateTweet(makeReq({ user: { _id: 'u1' }, params: { tweetId: VID }, body: { content: 'new' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
@@ -101,16 +101,16 @@ describe('Tweet Controller', () => {
       Tweet.findByIdAndDelete.mockResolvedValue({ _id: VID });
       Tweet.deleteMany.mockResolvedValue({});
       const { res, next } = createMockRes();
-      tweetController.deleteTweet(makeReq({ user: { _id: 'u1' }, params: { tweetId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await tweetController.deleteTweet(makeReq({ user: { _id: 'u1' }, params: { tweetId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('returns 403 when not owner', async () => {
       Tweet.findById.mockResolvedValue({ _id: VID, owner: 'u2' });
       const { res, next } = createMockRes();
-      tweetController.deleteTweet(makeReq({ user: { _id: 'u1' }, params: { tweetId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await tweetController.deleteTweet(makeReq({ user: { _id: 'u1' }, params: { tweetId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
@@ -127,8 +127,8 @@ describe('Comment Controller', () => {
   describe('getVideoComments', () => {
     it('returns 200 with paginated comments', async () => {
       const { res, next } = createMockRes();
-      commentController.getVideoComments(makeReq({ params: { videoId: VID }, query: { page: '1', limit: '10' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await commentController.getVideoComments(makeReq({ params: { videoId: VID }, query: { page: '1', limit: '10' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -138,8 +138,8 @@ describe('Comment Controller', () => {
       Comment.create.mockResolvedValue({ _id: VID, content: 'c', owner: 'u1' });
       Comment.findById.mockResolvedValue({ _id: VID, content: 'c', owner: { _id: 'u1', username: 'a', avatar: 'av' } });
       const { res, next } = createMockRes();
-      commentController.addComment(makeReq({ user: { _id: 'u1' }, params: { videoId: VID }, body: { content: 'c' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await commentController.addComment(makeReq({ user: { _id: 'u1' }, params: { videoId: VID }, body: { content: 'c' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -148,16 +148,16 @@ describe('Comment Controller', () => {
     it('returns 200 on success', async () => {
       Comment.findById.mockResolvedValue({ _id: VID, owner: 'u1', save: jest.fn().mockResolvedValue({ _id: VID, content: 'updated' }) });
       const { res, next } = createMockRes();
-      commentController.updateComment(makeReq({ user: { _id: 'u1' }, params: { commentId: VID }, body: { content: 'updated' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await commentController.updateComment(makeReq({ user: { _id: 'u1' }, params: { commentId: VID }, body: { content: 'updated' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('returns 403 when not owner', async () => {
       Comment.findById.mockResolvedValue({ _id: VID, owner: 'u2' });
       const { res, next } = createMockRes();
-      commentController.updateComment(makeReq({ user: { _id: 'u1' }, params: { commentId: VID }, body: { content: 'x' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await commentController.updateComment(makeReq({ user: { _id: 'u1' }, params: { commentId: VID }, body: { content: 'x' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
@@ -167,16 +167,16 @@ describe('Comment Controller', () => {
       Comment.findById.mockResolvedValue({ _id: VID, owner: 'u1' });
       Comment.findByIdAndDelete.mockResolvedValue({ _id: VID });
       const { res, next } = createMockRes();
-      commentController.deleteComment(makeReq({ user: { _id: 'u1' }, params: { commentId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await commentController.deleteComment(makeReq({ user: { _id: 'u1' }, params: { commentId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('returns 403 when not owner', async () => {
       Comment.findById.mockResolvedValue({ _id: VID, owner: 'u2' });
       const { res, next } = createMockRes();
-      commentController.deleteComment(makeReq({ user: { _id: 'u1' }, params: { commentId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await commentController.deleteComment(makeReq({ user: { _id: 'u1' }, params: { commentId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
@@ -195,8 +195,8 @@ describe('Like Controller', () => {
       Like.findOne.mockResolvedValue(null);
       Like.create.mockResolvedValue({ _id: 'l1', likedBy: 'u1', video: 'v1' });
       const { res, next } = createMockRes();
-      likeController.toggleVideoLike(makeReq({ user: { _id: 'u1', username: 'a' }, params: { videoId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await likeController.toggleVideoLike(makeReq({ user: { _id: 'u1', username: 'a' }, params: { videoId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -204,8 +204,8 @@ describe('Like Controller', () => {
       Like.findOne.mockResolvedValue({ _id: 'l1' });
       Like.findByIdAndDelete.mockResolvedValue({ _id: 'l1' });
       const { res, next } = createMockRes();
-      likeController.toggleVideoLike(makeReq({ user: { _id: 'u1' }, params: { videoId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await likeController.toggleVideoLike(makeReq({ user: { _id: 'u1' }, params: { videoId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -215,8 +215,8 @@ describe('Like Controller', () => {
       Like.findOne.mockResolvedValue(null);
       Like.create.mockResolvedValue({ _id: 'l1' });
       const { res, next } = createMockRes();
-      likeController.toggleCommentLike(makeReq({ user: { _id: 'u1' }, params: { commentId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await likeController.toggleCommentLike(makeReq({ user: { _id: 'u1' }, params: { commentId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -226,8 +226,8 @@ describe('Like Controller', () => {
       Like.findOne.mockResolvedValue({ _id: 'l1' });
       Like.findByIdAndDelete.mockResolvedValue({ _id: 'l1' });
       const { res, next } = createMockRes();
-      likeController.toggleTweetLike(makeReq({ user: { _id: 'u1' }, params: { tweetId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await likeController.toggleTweetLike(makeReq({ user: { _id: 'u1' }, params: { tweetId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -237,8 +237,8 @@ describe('Like Controller', () => {
       const liked = [{ _id: 'l1', video: { _id: 'v1', owner: { username: 'a', avatar: 'av', fullName: 'A' } } }];
       Like.find.mockReturnValue({ sort: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), populate: jest.fn().mockReturnThis(), then: (cb) => Promise.resolve(liked).then(cb) });
       const { res, next } = createMockRes();
-      likeController.getLikedVideos(makeReq({ user: { _id: 'u1' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await likeController.getLikedVideos(makeReq({ user: { _id: 'u1' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -257,15 +257,15 @@ describe('Playlist Controller', () => {
     it('returns 200 with created playlist', async () => {
       Playlist.create.mockResolvedValue({ _id: 'p1', name: 'my playlist', description: 'desc' });
       const { res, next } = createMockRes();
-      playlistContorller.createPlaylist(makeReq({ user: { _id: 'u1' }, body: { name: 'my playlist', description: 'desc' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await playlistContorller.createPlaylist(makeReq({ user: { _id: 'u1' }, body: { name: 'my playlist', description: 'desc' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('returns 401 when fields missing', async () => {
       const { res, next } = createMockRes();
-      playlistContorller.createPlaylist(makeReq({ user: { _id: 'u1' }, body: { name: 'only name' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await playlistContorller.createPlaylist(makeReq({ user: { _id: 'u1' }, body: { name: 'only name' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
@@ -274,8 +274,8 @@ describe('Playlist Controller', () => {
     it('returns 200 with playlists', async () => {
       User.findById.mockResolvedValue({ _id: VID });
       const { res, next } = createMockRes();
-      playlistContorller.getUserPlaylists(makeReq({ params: { userId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await playlistContorller.getUserPlaylists(makeReq({ params: { userId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -284,16 +284,16 @@ describe('Playlist Controller', () => {
     it('returns 200 with playlist', async () => {
       Playlist.findById.mockResolvedValue({ _id: 'p1', name: 'test' });
       const { res, next } = createMockRes();
-      playlistContorller.getPlaylistById(makeReq({ params: { playlistId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await playlistContorller.getPlaylistById(makeReq({ params: { playlistId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('returns 404 when not found', async () => {
       Playlist.findById.mockResolvedValue(null);
       const { res, next } = createMockRes();
-      playlistContorller.getPlaylistById(makeReq({ params: { playlistId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await playlistContorller.getPlaylistById(makeReq({ params: { playlistId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
@@ -303,16 +303,16 @@ describe('Playlist Controller', () => {
       Playlist.findById.mockResolvedValue({ _id: 'p1', owner: 'u1' });
       Playlist.findByIdAndUpdate.mockResolvedValue({ _id: 'p1', videos: ['v1'] });
       const { res, next } = createMockRes();
-      playlistContorller.addVideoToPlaylist(makeReq({ user: { _id: 'u1' }, params: { playlistId: VID, videoId: 'v1' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await playlistContorller.addVideoToPlaylist(makeReq({ user: { _id: 'u1' }, params: { playlistId: VID, videoId: 'v1' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('returns 403 when not owner', async () => {
       Playlist.findById.mockResolvedValue({ _id: 'p1', owner: 'u2' });
       const { res, next } = createMockRes();
-      playlistContorller.addVideoToPlaylist(makeReq({ user: { _id: 'u1' }, params: { playlistId: VID, videoId: 'v1' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await playlistContorller.addVideoToPlaylist(makeReq({ user: { _id: 'u1' }, params: { playlistId: VID, videoId: 'v1' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
@@ -322,8 +322,8 @@ describe('Playlist Controller', () => {
       Playlist.findById.mockResolvedValue({ _id: 'p1', owner: 'u1' });
       Playlist.findByIdAndUpdate.mockResolvedValue({ _id: 'p1', name: 'test', videos: [] });
       const { res, next } = createMockRes();
-      playlistContorller.removeVideoFromPlaylist(makeReq({ user: { _id: 'u1' }, params: { playlistId: VID, videoId: 'v1' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await playlistContorller.removeVideoFromPlaylist(makeReq({ user: { _id: 'u1' }, params: { playlistId: VID, videoId: 'v1' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -333,8 +333,8 @@ describe('Playlist Controller', () => {
       Playlist.findById.mockResolvedValue({ _id: 'p1', owner: 'u1' });
       Playlist.findByIdAndDelete.mockResolvedValue({ _id: 'p1', name: 'test' });
       const { res, next } = createMockRes();
-      playlistContorller.deletePlaylist(makeReq({ user: { _id: 'u1' }, params: { playlistId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await playlistContorller.deletePlaylist(makeReq({ user: { _id: 'u1' }, params: { playlistId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -344,8 +344,8 @@ describe('Playlist Controller', () => {
       Playlist.findById.mockResolvedValue({ _id: 'p1', owner: 'u1' });
       Playlist.findByIdAndUpdate.mockResolvedValue({ _id: 'p1', name: 'new', description: 'newd' });
       const { res, next } = createMockRes();
-      playlistContorller.updatePlaylist(makeReq({ user: { _id: 'u1' }, params: { playlistId: VID }, body: { name: 'new', description: 'newd' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await playlistContorller.updatePlaylist(makeReq({ user: { _id: 'u1' }, params: { playlistId: VID }, body: { name: 'new', description: 'newd' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -364,8 +364,8 @@ describe('Subscription Controller', () => {
       Subscription.findOne.mockResolvedValue(null);
       Subscription.create.mockResolvedValue({ _id: 's1', subscriber: 'u1', channel: 'c1' });
       const { res, next } = createMockRes();
-      subscriptionController.toggleSubscription(makeReq({ user: { _id: 'u1', username: 'a' }, params: { channelId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await subscriptionController.toggleSubscription(makeReq({ user: { _id: 'u1', username: 'a' }, params: { channelId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
@@ -373,8 +373,8 @@ describe('Subscription Controller', () => {
       Subscription.findOne.mockResolvedValue({ _id: 's1' });
       Subscription.findByIdAndDelete.mockResolvedValue({ _id: 's1' });
       const { res, next } = createMockRes();
-      subscriptionController.toggleSubscription(makeReq({ user: { _id: 'u1' }, params: { channelId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await subscriptionController.toggleSubscription(makeReq({ user: { _id: 'u1' }, params: { channelId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -382,8 +382,8 @@ describe('Subscription Controller', () => {
   describe('getUserChannelSubscribers', () => {
     it('returns 200 with paginated subscribers', async () => {
       const { res, next } = createMockRes();
-      subscriptionController.getUserChannelSubscribers(makeReq({ params: { channelId: VID }, query: { page: '1', limit: '10' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await subscriptionController.getUserChannelSubscribers(makeReq({ params: { channelId: VID }, query: { page: '1', limit: '10' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -391,8 +391,8 @@ describe('Subscription Controller', () => {
   describe('getSubscribedChannels', () => {
     it('returns 200 with paginated channels', async () => {
       const { res, next } = createMockRes();
-      subscriptionController.getSubscribedChannels(makeReq({ params: { subscriberId: VID }, query: { page: '1', limit: '10' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await subscriptionController.getSubscribedChannels(makeReq({ params: { subscriberId: VID }, query: { page: '1', limit: '10' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -415,8 +415,8 @@ describe('Dashboard Controller', () => {
       Video.find.mockReturnValue(ch([]));
       Like.countDocuments.mockResolvedValue(5);
       const { res, next } = createMockRes();
-      dashboardController.getChannelStats(makeReq({ user: { _id: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await dashboardController.getChannelStats(makeReq({ user: { _id: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -424,8 +424,8 @@ describe('Dashboard Controller', () => {
   describe('getChannelVideos', () => {
     it('returns 200 with videos', async () => {
       const { res, next } = createMockRes();
-      dashboardController.getChannelVideos(makeReq({ user: { _id: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await dashboardController.getChannelVideos(makeReq({ user: { _id: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -437,15 +437,15 @@ describe('Recommendation Controller', () => {
   describe('getVideoRecommendations', () => {
     it('returns 200 with recommendations', async () => {
       const { res, next } = createMockRes();
-      recommendationController.getVideoRecommendations(makeReq({ params: { videoId: VID }, query: { limit: '5' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await recommendationController.getVideoRecommendations(makeReq({ params: { videoId: VID }, query: { limit: '5' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('returns 400 for invalid videoId', async () => {
       const { res, next } = createMockRes();
-      recommendationController.getVideoRecommendations(makeReq({ params: { videoId: 'invalid' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await recommendationController.getVideoRecommendations(makeReq({ params: { videoId: 'invalid' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
@@ -462,8 +462,8 @@ describe('Notification Controller', () => {
   describe('getMyNotifications', () => {
     it('returns 200 with notifications', async () => {
       const { res, next } = createMockRes();
-      notificationController.getMyNotifications(makeReq({ user: { _id: 'u1' }, query: { page: '1', limit: '10' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await notificationController.getMyNotifications(makeReq({ user: { _id: 'u1' }, query: { page: '1', limit: '10' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -472,15 +472,15 @@ describe('Notification Controller', () => {
     it('returns 200 when marking as read', async () => {
       Notification.updateMany.mockResolvedValue({ modifiedCount: 3 });
       const { res, next } = createMockRes();
-      notificationController.markAsRead(makeReq({ user: { _id: 'u1' }, body: { notificationIds: ['n1', 'n2', 'n3'] } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await notificationController.markAsRead(makeReq({ user: { _id: 'u1' }, body: { notificationIds: ['n1', 'n2', 'n3'] } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('returns 400 when ids empty', async () => {
       const { res, next } = createMockRes();
-      notificationController.markAsRead(makeReq({ user: { _id: 'u1' }, body: { notificationIds: [] } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await notificationController.markAsRead(makeReq({ user: { _id: 'u1' }, body: { notificationIds: [] } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
@@ -488,8 +488,8 @@ describe('Notification Controller', () => {
   describe('markAllAsRead', () => {
     it('returns 200 on success', async () => {
       const { res, next } = createMockRes();
-      notificationController.markAllAsRead(makeReq({ user: { _id: 'u1' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await notificationController.markAllAsRead(makeReq({ user: { _id: 'u1' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -507,18 +507,18 @@ describe('Analytics Controller', () => {
     it('returns 201 on new watch event', async () => {
       Video.exists.mockResolvedValue(true);
       const { res, next } = createMockRes();
-      analyticsController.recordWatchEvent(makeReq({
+      await analyticsController.recordWatchEvent(makeReq({
         user: { _id: 'u1' },
         body: { videoId: VID, watchDuration: 60, totalDuration: 120, source: 'direct', deviceType: 'desktop' }
       }), res, next);
-      await new Promise(r => setImmediate(r));
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
     it('returns 400 for invalid videoId', async () => {
       const { res, next } = createMockRes();
-      analyticsController.recordWatchEvent(makeReq({ user: { _id: 'u1' }, body: { videoId: 'invalid', watchDuration: 60, totalDuration: 120 } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await analyticsController.recordWatchEvent(makeReq({ user: { _id: 'u1' }, body: { videoId: 'invalid', watchDuration: 60, totalDuration: 120 } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
@@ -526,8 +526,8 @@ describe('Analytics Controller', () => {
   describe('getDashboardSummary', () => {
     it('returns 200 with summary', async () => {
       const { res, next } = createMockRes();
-      analyticsController.getDashboardSummary(makeReq({ user: { _id: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await analyticsController.getDashboardSummary(makeReq({ user: { _id: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -535,8 +535,8 @@ describe('Analytics Controller', () => {
   describe('getViewsChart', () => {
     it('returns 200 with views chart', async () => {
       const { res, next } = createMockRes();
-      analyticsController.getViewsChart(makeReq({ user: { _id: VID }, query: { period: 'month' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await analyticsController.getViewsChart(makeReq({ user: { _id: VID }, query: { period: 'month' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -544,8 +544,8 @@ describe('Analytics Controller', () => {
   describe('getSubscriberChart', () => {
     it('returns 200 with subscriber chart', async () => {
       const { res, next } = createMockRes();
-      analyticsController.getSubscriberChart(makeReq({ user: { _id: VID }, query: { period: 'month' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await analyticsController.getSubscriberChart(makeReq({ user: { _id: VID }, query: { period: 'month' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -553,8 +553,8 @@ describe('Analytics Controller', () => {
   describe('getTopVideosStats', () => {
     it('returns 200 with top videos', async () => {
       const { res, next } = createMockRes();
-      analyticsController.getTopVideosStats(makeReq({ user: { _id: VID }, query: { limit: '10' } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await analyticsController.getTopVideosStats(makeReq({ user: { _id: VID }, query: { limit: '10' } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
@@ -563,16 +563,16 @@ describe('Analytics Controller', () => {
     it('returns 200 with retention data', async () => {
       Video.findOne.mockResolvedValue({ _id: 'v1', owner: 'u1' });
       const { res, next } = createMockRes();
-      analyticsController.getVideoRetention(makeReq({ user: { _id: 'u1' }, params: { videoId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await analyticsController.getVideoRetention(makeReq({ user: { _id: 'u1' }, params: { videoId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('returns 404 when not found', async () => {
       Video.findOne.mockResolvedValue(null);
       const { res, next } = createMockRes();
-      analyticsController.getVideoRetention(makeReq({ user: { _id: 'u1' }, params: { videoId: VID } }), res, next);
-      await new Promise(r => setImmediate(r));
+      await analyticsController.getVideoRetention(makeReq({ user: { _id: 'u1' }, params: { videoId: VID } }), res, next);
+      // await new Promise(r => setImmediate(r));
       expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });

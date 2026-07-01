@@ -11,6 +11,8 @@ export default [
         clearTimeout: "readonly",
         setInterval: "readonly",
         clearInterval: "readonly",
+        setImmediate: "readonly",
+        clearImmediate: "readonly",
         Buffer: "readonly",
         // Jest globals
         jest: "readonly",

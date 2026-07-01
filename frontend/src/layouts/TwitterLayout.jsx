@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import useSocket from "../hooks/useSocket.js";
 import NotificationBell from "../components/Notifications/NotificationBell.jsx";
+import TweetComposer from "../components/Tweets/TweetComposer.jsx";
 import { API_BASE_URL } from "../config/api.js";
 
 const navItems = [
@@ -48,6 +49,42 @@ export default function TwitterLayout() {
             className="fixed inset-0 bg-black/50 z-40 md:hidden"
             onClick={() => setMobileMenuOpen(false)}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Composer Modal overlay */}
+      <AnimatePresence>
+        {showComposer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowComposer(false)}
+          >
+            <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="w-full max-w-[600px] bg-[#16181C] rounded-t-2xl sm:rounded-2xl border border-[#2F3336] p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={() => setShowComposer(false)}
+                  className="text-white hover:bg-white/10 p-2 rounded-full"
+                >
+                  ✕
+                </button>
+                <span className="text-white font-bold">New Post</span>
+                <div className="w-9" />
+              </div>
+              <TweetComposer
+                onTweetPosted={() => setShowComposer(false)}
+              />
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

@@ -17,6 +17,24 @@ import { initSocket } from "./config/socket.js";
 import { initTypesenseCollections } from "./config/typesenseCollections.js";
 import { logger } from "./utils/logger.js";
 
+const REQUIRED_ENV_VARS = [
+  'MONGODB_URI',
+  'ACCESS_TOKEN_SECRET',
+  'REFRESH_TOKEN_SECRET',
+  'ACCESS_TOKEN_EXPIRY',
+  'REFRESH_TOKEN_EXPIRY',
+  'PORT'
+];
+
+const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
+
+if (missingVars.length > 0) {
+  console.error('FATAL: Missing required environment variables:');
+  missingVars.forEach(v => console.error(`  - ${v}`));
+  console.error('Server cannot start without these variables.');
+  process.exit(1);
+}
+
 const server = http.createServer(app);
 initSocket(server);
 

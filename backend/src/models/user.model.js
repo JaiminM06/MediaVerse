@@ -81,6 +81,9 @@ userSchema.methods.isPasswordCorrect= async function(password){
 // jwt is a bearer token
 
 userSchema.methods.generateAccessToken = function(){
+    if (!process.env.ACCESS_TOKEN_SECRET) {
+        throw new Error('ACCESS_TOKEN_SECRET environment variable is not set');
+    }
     return jwt.sign(
         {
             _id:this._id,
@@ -95,6 +98,9 @@ userSchema.methods.generateAccessToken = function(){
     )
 }
 userSchema.methods.generateRefreshToken= function(){
+    if (!process.env.REFRESH_TOKEN_SECRET) {
+        throw new Error('REFRESH_TOKEN_SECRET environment variable is not set');
+    }
     return jwt.sign(
         {
             _id:this._id,

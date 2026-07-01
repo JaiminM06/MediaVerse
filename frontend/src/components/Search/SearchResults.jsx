@@ -160,7 +160,7 @@ export default function SearchResults() {
                     {videos.map((video) => (
                       <button
                         key={video._id || video.id}
-                        onClick={() => navigate(`/Home/${video._id || video.id}?source=search`)}
+                        onClick={() => navigate(`/youtube/watch/${video._id || video.id}`)}
                         className="group text-left bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-slate-300 transition-all"
                       >
                         <div className="relative aspect-video bg-slate-100">
@@ -202,7 +202,7 @@ export default function SearchResults() {
                     {tweets.map((tweet) => (
                       <button
                         key={tweet._id || tweet.id}
-                        onClick={() => navigate(`/Home/tweets/${tweet._id || tweet.id}`)}
+                        onClick={() => navigate(`/twitter/tweet/${tweet._id || tweet.id}`)}
                         className="w-full text-left p-4 hover:bg-slate-50 transition-colors"
                       >
                         <p className="text-sm font-semibold text-slate-700">

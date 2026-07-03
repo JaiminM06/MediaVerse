@@ -102,8 +102,9 @@ describe('User Auth API', () => {
 
     it('returns 200 when authenticated', async () => {
       const { User } = await import('../models/user.model.js');
-      User.findById.mockResolvedValue({
-        _id: VID, isPasswordCorrect: jest.fn().mockResolvedValue(true), save: jest.fn().mockResolvedValue(true)
+      User.findById.mockReturnValue({
+        select: jest.fn().mockResolvedValue({ _id: VID, isPasswordCorrect: jest.fn().mockResolvedValue(true), save: jest.fn().mockResolvedValue(true) }),
+        then: (cb) => Promise.resolve({ _id: VID, isPasswordCorrect: jest.fn().mockResolvedValue(true), save: jest.fn().mockResolvedValue(true) }).then(cb)
       });
       const res = await request(app).post('/api/v1/users/change-password')
         .set('Cookie', 'accessToken=valid-token')

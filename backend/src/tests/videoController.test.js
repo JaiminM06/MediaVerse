@@ -14,7 +14,19 @@ function makeReq(overrides = {}) {
 }
 
 function ch(value) {
-  return { populate: jest.fn().mockReturnThis(), sort: jest.fn().mockReturnThis(), select: jest.fn().mockReturnThis(), skip: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), then: (cb) => Promise.resolve(value).then(cb), exec: jest.fn().mockResolvedValue(value) };
+  const self = {
+    populate() { return self; },
+    sort()    { return self; },
+    select()  { return self; },
+    skip()    { return self; },
+    limit()   { return self; },
+    lean()    { return self; },
+    distinct() { return self; },
+    exec()    { return Promise.resolve(value); },
+    then(resolve)  { return Promise.resolve(value).then(resolve); },
+    catch(reject)  { return Promise.resolve(value).catch(reject); },
+  };
+  return self;
 }
 
 function reset(Video) {
@@ -84,13 +96,22 @@ describe('Video Controller — getVideoById', () => {
     ({ Video } = await import('../models/video.model.js'));
     ({ User } = await import('../models/user.model.js'));
     ({ Like } = await import('../models/like.model.js'));
-    reset(Video);
+    // Do NOT reset — use mockImplementation in each test for explicit control
     User.findByIdAndUpdate.mockResolvedValue(null);
     Like.countDocuments.mockResolvedValue(0);
     Like.exists.mockResolvedValue(false);
   });
 
-  it.todo('returns 200 with video data — unstable_mockModule ESM live bindings prevent Video.findById mock override from reaching controller');
+  it('returns 200 with video data', async () => {
+    const vid = { _id: TEST_VIDEO_ID, owner: { _id: 'other' }, isPublished: true, processingStatus: 'ready', views: 10, toObject() { return { ...this }; } };
+    Video.findById.mockImplementation(() => ({
+      populate() { return this; },
+      then(cb) { return Promise.resolve(vid).then(cb); }
+    }));
+    const { res, next } = createMockRes();
+    await videoController.getVideoById(makeReq({ params: { videoId: TEST_VIDEO_ID }, user: { _id: 'other' } }), res, next);
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
 
   it('returns 400 for invalid videoId', async () => {
     const { res, next } = createMockRes();
@@ -124,7 +145,19 @@ describe('Video Controller — updateVideo', () => {
     reset(Video);
   });
 
-  it.todo('returns 200 on successful update — unstable_mockModule ESM live bindings prevent mock override from reaching controller');
+  it('returns 200 on successful update', async () => {
+    const vid = { _id: TEST_VIDEO_ID, owner: 'u1' };
+    const updated = { _id: TEST_VIDEO_ID, title: 'new', description: 'newd' };
+    Video.findById.mockImplementation(() => ({
+      populate() { return this; },
+      then(cb) { cb(vid); return this; },
+      catch() { return this; }
+    }));
+    Video.findByIdAndUpdate.mockImplementation(() => Promise.resolve(updated));
+    const { res, next } = createMockRes();
+    await videoController.updateVideo(makeReq({ user: { _id: 'u1' }, params: { videoId: TEST_VIDEO_ID }, body: { title: 'new', description: 'newd' } }), res, next);
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
 
   it('returns 400 when no fields provided', async () => {
     Video.findById.mockResolvedValue({ _id: TEST_VIDEO_ID, owner: 'u1' });
@@ -157,7 +190,13 @@ describe('Video Controller — deleteVideo', () => {
     ({ Video } = await import('../models/video.model.js'));
   });
 
-  it.todo('returns 200 on successful delete — unstable_mockModule ESM live bindings prevent mock override from reaching controller');
+  it('returns 200 on successful delete', async () => {
+    Video.findById.mockImplementation(() => Promise.resolve({ _id: TEST_VIDEO_ID, owner: 'u1', rawFileKey: null, hlsManifestUrl: null }));
+    Video.findByIdAndDelete.mockImplementation(() => Promise.resolve({ _id: TEST_VIDEO_ID }));
+    const { res, next } = createMockRes();
+    await videoController.deleteVideo(makeReq({ user: { _id: 'u1' }, params: { videoId: TEST_VIDEO_ID } }), res, next);
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
 
   it('returns 403 when not owner', async () => {
     Video.findById.mockResolvedValue({ _id: TEST_VIDEO_ID, owner: 'other' });
@@ -174,7 +213,17 @@ describe('Video Controller — togglePublishStatus', () => {
     ({ Video } = await import('../models/video.model.js'));
   });
 
-  it.todo('returns 200 when toggling publish status — unstable_mockModule ESM live bindings prevent mock override from reaching controller');
+  it('returns 200 when toggling publish status', async () => {
+    const vid = { _id: TEST_VIDEO_ID, isPublished: true, save: jest.fn().mockResolvedValue(true) };
+    Video.findById.mockImplementation(() => ({
+      populate() { return this; },
+      then(cb) { cb(vid); return this; },
+      catch() { return this; }
+    }));
+    const { res, next } = createMockRes();
+    await videoController.togglePublishStatus(makeReq({ params: { videoId: TEST_VIDEO_ID } }), res, next);
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
 
   it('returns 404 when not found', async () => {
     Video.findById.mockResolvedValue(null);

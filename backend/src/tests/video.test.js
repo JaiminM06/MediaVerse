@@ -1,6 +1,6 @@
-import { jest, describe, it, expect, afterEach, beforeAll } from '@jest/globals';
+import { jest, describe, it, expect, afterEach, beforeAll, beforeEach } from '@jest/globals';
 import request from 'supertest';
-import { setupTestMocks } from './setup.js';
+import { setupTestMocks, resetVideoMocks, createMockQueryChain } from './setup.js';
 
 let app;
 
@@ -13,6 +13,10 @@ beforeAll(async () => {
 
 afterEach(() => {
   jest.clearAllMocks();
+});
+
+beforeEach(async () => {
+  await resetVideoMocks();
 });
 
 describe('Video API', () => {
@@ -98,7 +102,17 @@ describe('Video API', () => {
       expect(res.body.success).toBe(false);
     });
 
-    it.todo('returns 200 with video data when authenticated and video exists');
+    it('returns 200 with video data when video exists', async () => {
+      const { Video } = await import('../models/video.model.js');
+      const mockVid = { _id: VID, title: 'Test', description: 'Desc', owner: { _id: 'u1', username: 'a', avatar: 'av' }, isPublished: true, processingStatus: 'ready', views: 10, toObject() { return { ...this }; } };
+      Video.findById.mockReturnValue(createMockQueryChain(mockVid));
+      Video.findByIdAndUpdate.mockReturnValue(createMockQueryChain(mockVid));
+      const res = await request(app)
+        .get(`/api/v1/videos/${VID}`)
+        .set('Cookie', 'accessToken=valid-token');
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
   });
 
   describe('DELETE /api/v1/videos/:videoId', () => {

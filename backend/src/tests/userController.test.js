@@ -41,7 +41,12 @@ describe('User Controller — registerUser', () => {
     expect(next).toHaveBeenCalledWith(expect.any(Error));
   });
 
-  it.todo('returns 409 when duplicate — unstable_mockModule ESM live bindings prevent mock override propagation');
+  it('returns 409 when duplicate', async () => {
+    User.findOne.mockResolvedValue({ _id: TEST_USER_ID, username: 'test', email: 'test@test.com' });
+    const { res, next } = createMockRes();
+    await userController.registerUser(makeReq({ body: { fullName: 'Test', email: 'test@test.com', username: 'test', password: 'pass123456' }, files: FILES }), res, next);
+    expect(next).toHaveBeenCalledWith(expect.any(Error));
+  });
 
   it('returns 400 when avatar missing', async () => {
     User.findOne.mockResolvedValue(null);
@@ -57,7 +62,16 @@ describe('User Controller — loginUser', () => {
     ({ User } = await import('../models/user.model.js'));
   });
 
-  it.todo('returns 200 with tokens and cookies — unstable_mockModule ESM live bindings prevent mock override propagation');
+  it('returns 200 with tokens and cookies', async () => {
+    const mockUser = { _id: TEST_USER_ID, username: 'test', email: 'test@test.com', isPasswordCorrect: jest.fn().mockResolvedValue(true), generateAccessToken: jest.fn().mockReturnValue('at'), generateRefreshToken: jest.fn().mockReturnValue('rt'), save: jest.fn().mockResolvedValue(true) };
+    User.findOne.mockResolvedValue(mockUser);
+    User.findById.mockReturnValue(sel({ _id: TEST_USER_ID, username: 'test', email: 'test@test.com', refreshToken: 'rt', generateAccessToken: jest.fn().mockReturnValue('at'), generateRefreshToken: jest.fn().mockReturnValue('rt'), save: jest.fn().mockResolvedValue(true) }));
+    const { res, next } = createMockRes();
+    await userController.loginUser(makeReq({ body: { email: 'test@test.com', password: 'pass123456' } }), res, next);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.cookie).toHaveBeenCalledWith('accessToken', 'at', expect.any(Object));
+    expect(res.cookie).toHaveBeenCalledWith('refreshToken', 'rt', expect.any(Object));
+  });
 
   it('returns 400 when not found', async () => {
     User.findOne.mockResolvedValue(null);
@@ -96,7 +110,12 @@ describe('User Controller — refreshAccessToken', () => {
     ({ User } = await import('../models/user.model.js'));
   });
 
-  it.todo('returns 200 with new tokens — unstable_mockModule ESM live bindings prevent mock override propagation');
+  it('returns 200 with new tokens', async () => {
+    User.findById.mockResolvedValue({ _id: TEST_USER_ID, refreshToken: 'token', generateAccessToken: jest.fn().mockReturnValue('new-at'), generateRefreshToken: jest.fn().mockReturnValue('new-rt'), save: jest.fn().mockResolvedValue(true) });
+    const { res, next } = createMockRes();
+    await userController.refreshAccessToken(makeReq({ cookies: { refreshToken: 'token' }, body: {} }), res, next);
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
 
   it('returns 401 when no token', async () => {
     const { res, next } = createMockRes();
@@ -118,7 +137,12 @@ describe('User Controller — changeCurrentPassword', () => {
     expect(res.status).toHaveBeenCalledWith(200);
   });
 
-  it.todo('returns 400 when old password wrong — unstable_mockModule ESM live bindings prevent mock override propagation');
+  it('returns 400 when old password wrong', async () => {
+    const { res, next } = createMockRes();
+    User.findById.mockResolvedValue({ _id: TEST_USER_ID, isPasswordCorrect: jest.fn().mockResolvedValue(false) });
+    await userController.changeCurrentPassword(makeReq({ user: { _id: TEST_USER_ID }, body: { oldPassword: 'wrong', newPassword: 'new' } }), res, next);
+    expect(next).toHaveBeenCalledWith(expect.any(Error));
+  });
 });
 
 describe('User Controller — getCurrentUser', () => {
@@ -195,7 +219,12 @@ describe('User Controller — getUserChannelProfile', () => {
     ({ User } = await import('../models/user.model.js'));
   });
 
-  it.todo('returns 200 with profile — unstable_mockModule ESM live bindings prevent mock override propagation');
+  it('returns 200 with profile', async () => {
+    User.aggregate.mockResolvedValue([{ _id: TEST_USER_ID, fullName: 'Test User', username: 'test', subscribersCount: 5, channelsSubscribedToCount: 3, isSubscribed: false, avatar: 'http://example.com/avatar.jpg', coverImage: '', email: 'test@test.com' }]);
+    const { res, next } = createMockRes();
+    await userController.getUserChannelProfile(makeReq({ params: { username: 'test' }, user: { _id: TEST_USER_ID } }), res, next);
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
 
   it('returns 404 when not found', async () => {
     User.aggregate.mockResolvedValue([]);

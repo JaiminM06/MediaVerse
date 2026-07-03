@@ -1,5 +1,5 @@
 import { jest, describe, it, expect, beforeEach, beforeAll } from '@jest/globals';
-import { setupTestMocks, createMockRes } from './setup.js';
+import { setupTestMocks, createMockRes, createMockQueryChain } from './setup.js';
 
 let tweetController, commentController, likeController, playlistContorller;
 let subscriptionController, dashboardController, recommendationController;
@@ -21,7 +21,7 @@ beforeAll(async () => {
 });
 
 function makeReq(overrides = {}) {
-  return { params: {}, query: {}, body: {}, ip: '127.0.0.1', headers: {}, ...overrides };
+  return { params: {}, query: {}, body: {}, ip: '127.0.0.1', headers: {}, socket: { remoteAddress: '127.0.0.1' }, ...overrides };
 }
 
 function ch(value) {
@@ -35,10 +35,25 @@ describe('Tweet Controller', () => {
   beforeEach(async () => {
     ({ Tweet } = await import('../models/tweet.model.js'));
     ({ Like } = await import('../models/like.model.js'));
+    // Reset methods modified across nested describes (singleton contamination).
+    // mockReturnValue(null) restores factory default rather than mockReset which
+    // leaves the mock returning undefined, breaking implicit chainable usage.
+    Tweet.findById.mockReturnValue(null);
+    Tweet.create.mockReturnValue(Promise.resolve({}));
+    Tweet.findByIdAndDelete.mockReturnValue(null);
+    Tweet.deleteMany.mockReturnValue({ deletedCount: 0 });
+    Like.deleteMany.mockReturnValue({ deletedCount: 0 });
   });
 
   describe('createTweet', () => {
-    it.todo('returns 200 with created tweet (blocked: unstable_mockModule ESM live bindings do not propagate property reassignments to already-loaded controller modules. Requires jest.isolateModules or jest.resetModules to re-import controller after mock setup.)');
+    it('returns 200 with created tweet', async () => {
+      const saved = { _id: VID, content: 'hello', owner: { _id: 'u1', username: 'a', avatar: 'av', fullName: 'A' }, mentions: [], media: [], hashtags: [], isRetweet: false };
+      Tweet.create.mockResolvedValue(saved);
+      Tweet.findById.mockReturnValue(createMockQueryChain(saved));
+      const { res, next } = createMockRes();
+      await tweetController.createTweet(makeReq({ user: { _id: 'u1', username: 'a' }, body: { content: 'hello' } }), res, next);
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
 
     it('forwards DB failures to next()', async () => {
       Tweet.create.mockRejectedValue(new Error('DB down'));
@@ -60,7 +75,12 @@ describe('Tweet Controller', () => {
   });
 
   describe('updateTweet', () => {
-    it.todo('returns 200 on success (blocked: unstable_mockModule ESM live bindings — owner.toString() mock does not reach controller)');
+    it('returns 200 on success', async () => {
+      Tweet.findById.mockResolvedValue({ _id: VID, content: 'old', owner: { toString: () => 'u1' }, isRetweet: false, save: jest.fn().mockResolvedValue(true), populate: jest.fn().mockResolvedValue({ _id: VID, content: 'new content', owner: { _id: 'u1', username: 'a' } }) });
+      const { res, next } = createMockRes();
+      await tweetController.updateTweet(makeReq({ user: { _id: 'u1' }, params: { tweetId: VID }, body: { content: 'new content' } }), res, next);
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
 
     it('returns 403 when not owner', async () => {
       Tweet.findById.mockResolvedValue({ _id: VID, owner: { toString: () => 'u2' }, isRetweet: false, save: jest.fn().mockResolvedValue(true) });
@@ -78,7 +98,15 @@ describe('Tweet Controller', () => {
   });
 
   describe('deleteTweet', () => {
-    it.todo('returns 200 on success (blocked: unstable_mockModule ESM live bindings — cascade delete mocks do not reach controller)');
+    it('returns 200 on success', async () => {
+      Tweet.findById.mockResolvedValue({ _id: VID, owner: { toString: () => 'u1' }, parentTweet: null, isRetweet: false, originalTweet: null, media: [] });
+      Tweet.findByIdAndDelete.mockResolvedValue({ _id: VID });
+      Tweet.deleteMany.mockResolvedValue({ deletedCount: 0 });
+      Like.deleteMany.mockResolvedValue({ deletedCount: 0 });
+      const { res, next } = createMockRes();
+      await tweetController.deleteTweet(makeReq({ user: { _id: 'u1' }, params: { tweetId: VID } }), res, next);
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
 
     it('returns 403 when not owner', async () => {
       Tweet.findById.mockResolvedValue({ _id: VID, owner: { toString: () => 'u2' } });
@@ -106,7 +134,13 @@ describe('Comment Controller', () => {
   });
 
   describe('addComment', () => {
-    it.todo('returns 200 with created comment (blocked: unstable_mockModule ESM live bindings — Comment.create mock does not reach controller)');
+    it('returns 200 with created comment', async () => {
+      Comment.create.mockResolvedValue({ _id: VID, content: 'c', owner: 'u1', video: VID });
+      Comment.findById.mockReturnValue(createMockQueryChain({ _id: VID, content: 'c', owner: { _id: 'u1', username: 'a', avatar: 'av' }, video: VID }));
+      const { res, next } = createMockRes();
+      await commentController.addComment(makeReq({ user: { _id: 'u1' }, params: { videoId: VID }, body: { content: 'c' } }), res, next);
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
   });
 
   describe('updateComment', () => {
@@ -351,7 +385,15 @@ describe('Dashboard Controller', () => {
   });
 
   describe('getChannelStats', () => {
-    it.todo('returns 200 with channel statistics (blocked: unstable_mockModule ESM live bindings — Video.find().distinct() mock does not reach controller. Requires service-level integration test.)');
+    it('returns 200 with channel statistics', async () => {
+      Subscription.countDocuments.mockResolvedValue(10);
+      Video.aggregate.mockResolvedValue([]);
+      Video.find.mockReturnValue(ch([]));
+      Like.countDocuments.mockResolvedValue(5);
+      const { res, next } = createMockRes();
+      await dashboardController.getChannelStats(makeReq({ user: { _id: VID } }), res, next);
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
   });
 
   describe('getChannelVideos', () => {
@@ -429,10 +471,26 @@ describe('Analytics Controller', () => {
   beforeEach(async () => {
     ({ Video } = await import('../models/video.model.js'));
     ({ default: VideoAnalytics } = await import('../models/videoAnalytics.model.js'));
+    Video.exists.mockResolvedValue(false);
+    VideoAnalytics.create.mockResolvedValue({});
   });
 
   describe('recordWatchEvent', () => {
-    it.todo('returns 201 on new watch event (blocked: unstable_mockModule ESM live bindings — redisClient.get() and VideoAnalytics.create() mocks do not reach controller)');
+    it('returns 201 on new watch event', async () => {
+      Video.exists.mockResolvedValue(true);
+      const redisClient = (await import('../config/redis.js')).default;
+      redisClient.get.mockResolvedValue(null);
+      redisClient.set.mockResolvedValue('OK');
+      VideoAnalytics.create.mockResolvedValue({ _id: VID, video: VID, viewer: 'u1', watchDuration: 60, totalDuration: 120, completionRate: 0.5, source: 'direct', deviceType: 'desktop' });
+      const { res, next } = createMockRes();
+      await analyticsController.recordWatchEvent(makeReq({
+        user: { _id: 'u1' },
+        body: { videoId: VID, watchDuration: 60, totalDuration: 120, source: 'direct', deviceType: 'desktop' }
+      }), res, next);
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it.todo('recordWatchEvent 201 — verify redisClient and VideoAnalytics singletons resolve correctly after app.js import');
 
     it('returns 400 for invalid videoId', async () => {
       const { res, next } = createMockRes();

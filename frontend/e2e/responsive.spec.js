@@ -13,14 +13,13 @@ const feedTitle = (page) =>
 // ║                        MOBILE   (375 × 812)                              ║
 // ╚══════════════════════════════════════════════════════════════════════════╝
 test.describe('Mobile — 375 × 812', () => {
-
   test('YouTube sidebar is off-screen (collapsed / hamburger-driven)', async ({ page }) => {
     await page.setViewportSize(MOBILE);
     await page.goto('/youtube/feed');
 
     // The sidebar is fixed and translated off-screen on mobile
     const sidebar = page.locator('aside').first();
-    await expect(sidebar).not.toBeVisible();
+    await expect(sidebar).not.toBeInViewport();
 
     // header hamburger button opens it
     const hamburger = page.locator('header button:has(svg)').first();
@@ -44,20 +43,19 @@ test.describe('Mobile — 375 × 812', () => {
     const bottomNav = page.locator('nav.md\\:hidden').first();
     await expect(bottomNav).toBeVisible();
 
-    // Specific icons: Home, Search, User, Feather (post)
-    await expect(bottomNav.locator('a, button').first()).toBeVisible();
-    await expect(bottomNav.locator('svg.lucide-home').first()).toBeVisible();
-    await expect(bottomNav.locator('svg.lucide-search').first()).toBeVisible();
-    await expect(bottomNav.locator('svg.lucide-feather').first()).toBeVisible();
-    await expect(bottomNav.locator('svg.lucide-user').first()).toBeVisible();
+    // Specific icons: Home, Explore, Post, Profile
+    await expect(bottomNav.getByRole('link', { name: 'Home' })).toBeVisible();
+    await expect(bottomNav.getByRole('link', { name: 'Explore' })).toBeVisible();
+    await expect(bottomNav.getByRole('button', { name: 'Post' })).toBeVisible();
+    await expect(bottomNav.getByRole('link', { name: 'Profile' })).toBeVisible();
   });
 
   test('Twitter floating post FAB button visible on mobile', async ({ page }) => {
     await page.setViewportSize(MOBILE);
     await page.goto('/twitter/home');
 
-    // The bottom nav contains a circular button with Feather icon (post)
-    const fab = page.locator('nav.md\\:hidden button svg.lucide-feather').first();
+    const bottomNav = page.locator('nav.md\\:hidden').first();
+    const fab = bottomNav.getByRole('button', { name: 'Post' });
     await expect(fab).toBeVisible();
   });
 
@@ -74,13 +72,13 @@ test.describe('Mobile — 375 × 812', () => {
 
     // YouTube → Twitter via header toggle button
     await page.goto('/youtube/feed');
-    const ytSwitch = page.locator('button:has-text("Twitter")').first();
+    const ytSwitch = page.locator('header').getByRole('button', { name: 'Twitter' }).first();
     await expect(ytSwitch).toBeVisible();
     await ytSwitch.click();
     await expect(page).toHaveURL(/\/twitter/);
 
     // Twitter → YouTube via header toggle button
-    const twSwitch = page.locator('button:has-text("YouTube")').first();
+    const twSwitch = page.locator('header').getByRole('button', { name: 'YouTube' }).first();
     await expect(twSwitch).toBeVisible();
     await twSwitch.click();
     await expect(page).toHaveURL(/\/youtube/);
@@ -244,7 +242,7 @@ test.describe('Navigation across all breakpoints', () => {
     await page.setViewportSize(MOBILE);
     await page.goto('/twitter/home');
 
-    const ytBtn = page.locator('header button:has-text("YouTube")').first();
+    const ytBtn = page.locator('header').getByRole('button', { name: 'YouTube' }).first();
     await ytBtn.click();
     await expect(page).toHaveURL(/\/youtube/);
   });
@@ -253,7 +251,7 @@ test.describe('Navigation across all breakpoints', () => {
     await page.setViewportSize(TABLET);
     await page.goto('/youtube/feed');
 
-    const twBtn = page.locator('button:has-text("Twitter")').first();
+    const twBtn = page.locator('header').getByRole('button', { name: 'Twitter' }).first();
     await twBtn.click();
     await expect(page).toHaveURL(/\/twitter/);
   });

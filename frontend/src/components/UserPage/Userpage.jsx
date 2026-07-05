@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Loader2, LogOut, Settings, Video } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatDuration } from "../../utils/formatDuration.js";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 function UserPage() {
   const [user, setUser] = useState(null);
@@ -15,6 +16,7 @@ function UserPage() {
 
   const navigate = useNavigate();
   const { username } = useParams();
+  const { logout } = useAuth();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -94,6 +96,7 @@ function UserPage() {
         {},
         { withCredentials: true }
       );
+      logout();
       navigate("/login");
     } catch {
       console.error("Logout failed");

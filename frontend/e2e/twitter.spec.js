@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import {  } from './helpers.js';
+import {  goTo} from './helpers.js';
 
 test.describe('Twitter Home Feed', () => {
   test('Twitter home loads with feed', async ({ page }) => {

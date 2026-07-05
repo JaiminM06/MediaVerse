@@ -9,12 +9,12 @@ import {
     getInfiniteHomeFeed
 } from "../controllers/video.controller.js"
 import {verifyJWT} from "../middlewares/auth.middleware.js"
+import optionalAuth from "../middlewares/optionalAuth.middleware.js"
 import {upload} from "../middlewares/multer.middleware.js"
 import {validate} from "../middlewares/validate.middleware.js"
 import {publishVideoSchema, updateVideoSchema} from "../validators/video.validators.js"
 
 const router = Router();
-router.use(verifyJWT); // Apply verifyJWT middleware to all routes in this file
 
 /**
  * @openapi
@@ -47,7 +47,7 @@ router.use(verifyJWT); // Apply verifyJWT middleware to all routes in this file
  *             schema:
  *               $ref: '#/components/schemas/ApiResponse'
  */
-router.route("/feed").get(getInfiniteHomeFeed);
+router.route("/feed").get(optionalAuth, getInfiniteHomeFeed);
 
 /**
  * @openapi
@@ -147,12 +147,12 @@ router.route("/feed").get(getInfiniteHomeFeed);
  */
 router
     .route("/")
-    .get(getAllVideos)
+    .get(optionalAuth, getAllVideos)
     // Video upload is handled via S3 presigned URLs:
     // Step 1: POST /api/v1/upload/request-url
     // Step 2: PUT directly to S3 (browser → S3, not through this server)
     // Step 3: POST /api/v1/upload/confirm/:videoId
-    .post(publishAVideo);
+    .post(verifyJWT, publishAVideo);
 
 /**
  * @openapi
@@ -261,9 +261,9 @@ router
  */
 router
     .route("/:videoId")
-    .get(getVideoById)
-    .delete(deleteVideo)
-    .patch(upload.single("thumbnail"), validate(updateVideoSchema), updateVideo);
+    .get(optionalAuth, getVideoById)
+    .delete(verifyJWT, deleteVideo)
+    .patch(verifyJWT, upload.single("thumbnail"), validate(updateVideoSchema), updateVideo);
 
 /**
  * @openapi
@@ -295,6 +295,6 @@ router
  *             schema:
  *               $ref: '#/components/schemas/ApiError'
  */
-router.route("/toggle/publish/:videoId").patch(togglePublishStatus);
+router.route("/toggle/publish/:videoId").patch(verifyJWT, togglePublishStatus);
 
 export default router;

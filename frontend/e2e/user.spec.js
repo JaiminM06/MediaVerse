@@ -1,16 +1,18 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
-import {  } from './helpers.js';
+import { goTo,
+  registerUser,
+  loginUser,
+  expectUrl, } from './helpers.js';
 
 // ─── Helpers ───────────────────────────────────────────────
 
 /**
  * Parse set-cookie header value into Playwright cookie objects.
  */
-function parseCookies(cookieHeader) {
-  if (!cookieHeader) return [];
-  return cookieHeader
-    .split(/,(?=\s*\w+=)/)
+function parseCookies(cookieArray) {
+  if (!cookieArray || cookieArray.length === 0) return [];
+  return cookieArray
     .map((c) => {
       const semicolonIdx = c.indexOf(';');
       const pair = (semicolonIdx > 0 ? c.substring(0, semicolonIdx) : c).trim();
@@ -31,7 +33,8 @@ function parseCookies(cookieHeader) {
  * The caller should then call goTo() with the desired path.
  */
 async function setupAuth(page, request) {
-  const { user, cookies } = await registerUser(request);
+  const { user } = await registerUser(request);
+  const { cookies } = await loginUser(request, user.email, user.password);
   const parsed = parseCookies(cookies);
   if (parsed.length > 0) {
     await page.context().addCookies(parsed);
@@ -45,7 +48,7 @@ test.describe('Channel Page', () => {
   test('navigate to /youtube/channel/:username shows channel page', async ({ page, request }) => {
     const user = await setupAuth(page, request);
     await goTo(page, `/youtube/channel/${user.username}`);
-    await expect(page.locator(`text=@${user.username}`)).toBeVisible();
+    await expect(page.locator(`text=@${user.username}`).first()).toBeVisible();
     await expect(page.locator('text=Videos').first()).toBeVisible();
   });
 
@@ -53,17 +56,18 @@ test.describe('Channel Page', () => {
     const user = await setupAuth(page, request);
     await goTo(page, `/youtube/channel/${user.username}`);
     await expect(page.getByRole('button', { name: 'Dashboard' })).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Videos$/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Videos$/ }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
   });
 
   test('channel page displays video grid area', async ({ page, request }) => {
     const user = await setupAuth(page, request);
     await goTo(page, `/youtube/channel/${user.username}`);
-    const videosTab = page.locator('text=Videos').first();
+    const videosTab = page.getByRole('button', { name: /^Videos$/ }).nth(1);
     await videosTab.click();
     const noVideosMsg = page.getByText('No videos uploaded yet.');
     const videoGrid = page.locator('.grid > article').first();
+    await page.screenshot({ path: 'channel.png', fullPage: true });
     await expect(noVideosMsg.or(videoGrid).first()).toBeVisible({ timeout: 10000 });
   });
 });
@@ -80,7 +84,7 @@ test.describe('Library Page', () => {
   });
 
   test('library page requires authentication', async ({ page }) => {
-    await page.goto('/youtube/library');
+    await goTo(page, '/youtube/library');
     await expectUrl(page, '/login');
   });
 });
@@ -148,6 +152,6 @@ test.describe('Sidebar User Display', () => {
     const user = await setupAuth(page, request);
     await goTo(page, '/youtube/feed');
     await page.waitForSelector(`text=@${user.username}`, { timeout: 10000 });
-    await expect(page.locator(`text=@${user.username}`)).toBeVisible();
+    await expect(page.locator(`text=@${user.username}`).first()).toBeVisible();
   });
 });

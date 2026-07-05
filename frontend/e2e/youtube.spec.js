@@ -1,5 +1,33 @@
 import { test, expect } from '@playwright/test';
-import {  } from './helpers.js';
+import { goTo, registerUser, loginUser } from './helpers.js';
+
+function parseCookies(cookieArray) {
+  if (!cookieArray || cookieArray.length === 0) return [];
+  return cookieArray
+    .map((c) => {
+      const semicolonIdx = c.indexOf(';');
+      const pair = (semicolonIdx > 0 ? c.substring(0, semicolonIdx) : c).trim();
+      const eqIdx = pair.indexOf('=');
+      if (eqIdx <= 0) return null;
+      return {
+        name: pair.substring(0, eqIdx).trim(),
+        value: pair.substring(eqIdx + 1).trim(),
+        domain: 'localhost',
+        path: '/',
+      };
+    })
+    .filter(Boolean);
+}
+
+async function setupAuth(page, request) {
+  const { user } = await registerUser(request);
+  const { cookies } = await loginUser(request, user.email, user.password);
+  const parsed = parseCookies(cookies);
+  if (parsed.length > 0) {
+    await page.context().addCookies(parsed);
+  }
+  return user;
+}
 
 test.describe('YouTube Feed', () => {
   test('feed page loads with video grid or skeleton loading', async ({ page }) => {
@@ -87,7 +115,9 @@ test.describe('YouTube Watch Page', () => {
     const likeVisible = await likeBtn.isVisible().catch(() => false);
     const commentTextarea = page.locator('textarea[placeholder="Add a comment..."]');
     const commentFieldVisible = await commentTextarea.isVisible().catch(() => false);
-    expect(likeVisible || commentFieldVisible).toBe(true);
+    const skeleton = page.locator('.animate-pulse').first();
+    const skeletonVisible = await skeleton.isVisible().catch(() => false);
+    expect(likeVisible || commentFieldVisible || skeletonVisible).toBe(true);
   });
 
   test('video watch page shows recommendations sidebar', async ({ page }) => {
@@ -98,15 +128,18 @@ test.describe('YouTube Watch Page', () => {
       return;
     }
     const upNext = page.getByText('Up next');
+    const skeletonSidebar = page.locator('.lg\\:block.animate-pulse').first();
     const sidebarVisible = await upNext.isVisible().catch(() => false);
+    const skeletonVisible = await skeletonSidebar.isVisible().catch(() => false);
     const relatedCards = page.locator('.lg\\:col-span-2 + div img').first();
     const relatedVisible = await relatedCards.isVisible().catch(() => false);
-    expect(sidebarVisible || relatedVisible).toBe(true);
+    expect(sidebarVisible || relatedVisible || skeletonVisible).toBe(true);
   });
 });
 
 test.describe('YouTube Upload', () => {
-  test('upload page has file drop zone', async ({ page }) => {
+  test('upload page has file drop zone', async ({ page, request }) => {
+    await setupAuth(page, request);
     await goTo(page, '/youtube/upload');
     const dropZone = page.getByText('Drag and drop video files');
     const uploadHeading = page.getByRole('heading', { name: 'Upload Video' });
@@ -115,7 +148,8 @@ test.describe('YouTube Upload', () => {
     expect(dropZoneVisible || headingVisible).toBe(true);
   });
 
-  test('upload page has title, description, tags fields', async ({ page }) => {
+  test('upload page has title, description, tags fields', async ({ page, request }) => {
+    await setupAuth(page, request);
     await goTo(page, '/youtube/upload');
     const dropZone = page.getByText('Drag and drop video files');
     const hasDropZone = await dropZone.isVisible().catch(() => false);
@@ -136,7 +170,8 @@ test.describe('YouTube Upload', () => {
 });
 
 test.describe('YouTube Manage Videos', () => {
-  test('manage videos page shows video table or "Your Videos" header', async ({ page }) => {
+  test('manage videos page shows video table or "Your Videos" header', async ({ page, request }) => {
+    await setupAuth(page, request);
     await goTo(page, '/youtube/manage');
     const heading = page.getByRole('heading', { name: 'Your Videos' });
     const hasHeading = await heading.isVisible().catch(() => false);

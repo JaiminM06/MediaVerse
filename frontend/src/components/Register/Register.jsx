@@ -23,6 +23,12 @@ function Register() {
     setError("");
     setSuccess("");
 
+    if (!avatarFile) {
+      setError("Avatar image is required");
+      setLoading(false);
+      return;
+    }
+
     const formData = new FormData();
     formData.append("fullName", fullName);
     formData.append("email", email);

@@ -189,6 +189,7 @@ export default function YouTubeLayout() {
                 localStorage.setItem("mv_last_platform", "twitter");
                 navigate("/twitter/home");
               }}
+              aria-label="Twitter"
               className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--tw-primary)]/10 text-[var(--tw-primary)] border border-[var(--tw-primary)]/20 rounded-full hover:bg-[var(--tw-primary)]/20 hover:border-[var(--tw-primary)]/40 transition-all text-xs font-semibold"
             >
               <Twitter size={14} />

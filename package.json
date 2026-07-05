@@ -15,6 +15,8 @@
     "lint:frontend": "npm run lint --prefix frontend",
     "lint": "npm run lint:backend",
     "test:backend": "npm run test --prefix backend",
+    "test:e2e": "npm run test:e2e --prefix frontend",
+    "test:all": "npm test && npm run test:e2e",
     "test": "npm run test:backend"
   },
   "devDependencies": {

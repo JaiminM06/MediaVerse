@@ -7,14 +7,27 @@ const API_URL = process.env.API_URL || 'http://localhost:8000';
  * Registers a new user via API and retrieves auth cookies.
  */
 async function registerUser(request, userData = {}) {
+  const uniqueStr = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const defaults = {
     fullName: 'E2E Test User',
-    email: `e2e_${Date.now()}@test.com`,
-    username: `e2euser_${Date.now()}`,
+    email: `e2e_${uniqueStr}@test.com`,
+    username: `e2e_${uniqueStr}`,
     password: 'E2EPass123!',
   };
   const data = { ...defaults, ...userData };
-  const res = await request.post(`${API_URL}/api/v1/users/register`, { data });
+  const res = await request.post(`${API_URL}/api/v1/users/register`, {
+    multipart: {
+      fullName: data.fullName,
+      email: data.email,
+      username: data.username,
+      password: data.password,
+      avatar: {
+        name: 'avatar.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+      }
+    }
+  });
   return { user: data, status: res.status(), cookies: res.headers()['set-cookie'] };
 }
 
@@ -25,7 +38,8 @@ async function loginUser(request, email, password) {
   const res = await request.post(`${API_URL}/api/v1/users/login`, {
     data: { email, password },
   });
-  const cookies = res.headers()['set-cookie'] || '';
+  const headers = res.headersArray();
+  const cookies = headers.filter(h => h.name.toLowerCase() === 'set-cookie').map(h => h.value);
   return { status: res.status(), cookies };
 }
 
@@ -34,7 +48,7 @@ async function loginUser(request, email, password) {
  */
 async function goTo(page, path) {
   await page.goto(`${BASE_URL}${path}`);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }
 
 /**

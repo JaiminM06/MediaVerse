@@ -155,6 +155,7 @@ export default function TwitterLayout() {
             localStorage.setItem("mv_last_platform", "youtube");
             navigate("/youtube/feed");
           }}
+          aria-label="YouTube"
           className="flex items-center justify-center xl:justify-start gap-3 w-12 h-12 xl:w-full xl:h-auto xl:px-4 xl:py-2.5 mb-2 bg-[#FF0000]/10 text-[#FF0000] border border-[#FF0000]/20 rounded-full hover:bg-[#FF0000]/20 hover:border-[#FF0000]/40 transition-all text-sm font-semibold"
         >
           <Film size={18} />
@@ -212,11 +213,11 @@ export default function TwitterLayout() {
             <Outlet context={{ socket, currentUserId: user?._id, user, platform: "twitter", showComposer, setShowComposer }} />
           </div>
         </main>
-
         {/* Mobile bottom nav */}
         <nav className="md:hidden flex items-center justify-around h-14 bg-[var(--tw-surface)] border-t border-[var(--tw-border)] flex-shrink-0">
           <NavLink
             to="/twitter/home"
+            aria-label="Home"
             className={({ isActive }) =>
               `flex flex-col items-center justify-center flex-1 h-full transition-colors ${isActive ? "text-white" : "text-[var(--tw-text-secondary)]"}`
             }
@@ -225,6 +226,7 @@ export default function TwitterLayout() {
           </NavLink>
           <NavLink
             to="/twitter/search"
+            aria-label="Explore"
             className={({ isActive }) =>
               `flex flex-col items-center justify-center flex-1 h-full transition-colors ${isActive ? "text-white" : "text-[var(--tw-text-secondary)]"}`
             }
@@ -233,12 +235,14 @@ export default function TwitterLayout() {
           </NavLink>
           <button
             onClick={() => setShowComposer(true)}
+            aria-label="Post"
             className="flex items-center justify-center w-12 h-12 -mt-4 bg-[var(--tw-primary)] rounded-full text-white shadow-lg shadow-[var(--tw-primary)]/30"
           >
             <Feather size={20} />
           </button>
           <NavLink
             to={user ? `/twitter/profile/${user.username}` : "#"}
+            aria-label="Profile"
             className={({ isActive }) =>
               `flex flex-col items-center justify-center flex-1 h-full transition-colors ${isActive ? "text-white" : "text-[var(--tw-text-secondary)]"}`
             }

@@ -7,13 +7,11 @@ export const getGlobalTweetFeed = async (page, limit, userId = null) => {
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 20;
     const skipNum = (pageNum - 1) * limitNum;
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
     const pipeline = [
         {
             $match: {
                 isRetweet: false,
-                createdAt: { $gte: sevenDaysAgo }
+                parentTweet: { $eq: null }
             }
         },
         // Lookup like count for engagement scoring
@@ -162,77 +160,117 @@ export const getGlobalTweetFeed = async (page, limit, userId = null) => {
         isPersonalized: false
     };
 };
-
 export const getPersonalizedTweetFeed = async (userId, page, limit) => {
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 20;
 
-    const following = await Subscription.find({ subscriber: userId }).select('channel');
+    // 1. Fetch channel IDs the user follows
+    const following = await Subscription.find({ subscriber: userId }).select('channel').lean();
     const followingIds = following.map(s => s.channel);
 
     if (followingIds.length === 0) {
         return getGlobalTweetFeed(pageNum, limitNum, userId);
     }
 
-    const candidates = await Tweet.find({
-        owner: { $in: [...followingIds, userId] },
-        isRetweet: false,
-        createdAt: { $gte: new Date(Date.now() - 48 * 60 * 60 * 1000) }
-    })
-    .populate('owner', 'username avatar fullName')
-    .populate('quoteTweet')
-    .populate({ path: 'originalTweet', populate: { path: 'owner', select: 'username avatar' } })
-    .lean();
+    // Include the user's own ID in the feed pool
+    const authorPool = [...followingIds, userId];
 
-    if (candidates.length === 0) {
-        return {
-            tweets: [],
-            totalCount: 0,
-            page: pageNum,
-            limit: limitNum,
-            isPersonalized: true
-        };
-    }
+    // 2. Efficient aggregation utilizing compound index { owner: 1, isRetweet: 1, parentTweet: 1, createdAt: -1 }
+    const pipeline = [
+        {
+            $match: {
+                owner: { $in: authorPool },
+                isRetweet: false,
+                parentTweet: null
+            }
+        },
+        // Limit candidates inside MongoDB BEFORE sorting or populating to save RAM/CPU
+        { $sort: { createdAt: -1 } },
+        { $skip: (pageNum - 1) * limitNum },
+        { $limit: limitNum },
+        // Lookup like stats
+        {
+            $lookup: {
+                from: 'likes',
+                let: { tweetId: '$_id' },
+                pipeline: [
+                    { $match: { $expr: { $eq: ['$tweet', '$$tweetId'] } } },
+                    { $count: 'total' }
+                ],
+                as: 'likesStats'
+            }
+        },
+        // Check if current user liked the tweet
+        {
+            $lookup: {
+                from: 'likes',
+                let: { tweetId: '$_id' },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    { $eq: ['$tweet', '$$tweetId'] },
+                                    { $eq: ['$likedBy', new mongoose.Types.ObjectId(userId)] }
+                                ]
+                            }
+                        }
+                    },
+                    { $limit: 1 }
+                ],
+                as: 'userLike'
+            }
+        },
+        {
+            $addFields: {
+                likeCount: { $ifNull: [{ $arrayElemAt: ['$likesStats.total', 0] }, 0] },
+                likedByCurrentUser: { $gt: [{ $size: '$userLike' }, 0] }
+            }
+        },
+        // Compute engagement score directly inside MongoDB
+        {
+            $addFields: {
+                engagementScore: {
+                    $add: [
+                        { $multiply: [{ $ifNull: ['$views', 0] }, 0.1] },
+                        { $multiply: ['$likeCount', 5] },
+                        { $multiply: [{ $ifNull: ['$retweetCount', 0] }, 3] },
+                        { $multiply: [{ $ifNull: ['$replyCount', 0] }, 2] }
+                    ]
+                }
+            }
+        },
+        { $unset: ['likesStats', 'userLike'] },
+        // Lookup owner details
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner"
+            }
+        },
+        { $unwind: "$owner" },
+        {
+            $project: {
+                _id: 1,
+                content: 1,
+                createdAt: 1,
+                views: 1,
+                retweetCount: 1,
+                replyCount: 1,
+                likeCount: 1,
+                likedByCurrentUser: 1,
+                engagementScore: 1,
+                owner: { username: 1, avatar: 1, fullName: 1 }
+            }
+        }
+    ];
 
-    const candidateIds = candidates.map(t => t._id);
-
-    // Batch fetch: like counts + current user's likes in two aggregations
-    const [likeCounts, userLikes] = await Promise.all([
-        Like.aggregate([
-            { $match: { tweet: { $in: candidateIds }, likedBy: { $exists: true } } },
-            { $group: { _id: '$tweet', count: { $sum: 1 } } }
-        ]),
-        Like.find({
-            tweet: { $in: candidateIds },
-            likedBy: userId
-        }).select('tweet').lean()
-    ]);
-
-    const likeMap = Object.fromEntries(likeCounts.map(l => [l._id.toString(), l.count]));
-    const userLikedSet = new Set(userLikes.map(l => l.tweet.toString()));
-
-    for (const tweet of candidates) {
-        const tweetIdStr = tweet._id.toString();
-        const likeCount = likeMap[tweetIdStr] || 0;
-        const ageHours = (Date.now() - new Date(tweet.createdAt)) / (1000 * 60 * 60);
-        const recencyScore = Math.max(0, 48 - ageHours) / 48;
-
-        tweet.likeCount = likeCount;
-        tweet.likedByCurrentUser = userLikedSet.has(tweetIdStr);
-        tweet.engagementScore =
-            (tweet.views || 0) * 0.1 +
-            likeCount * 5 +
-            (tweet.retweetCount || 0) * 3 +
-            (tweet.replyCount || 0) * 2 +
-            recencyScore * 20;
-    }
-
-    candidates.sort((a, b) => b.engagementScore - a.engagementScore);
-    const paginatedTweets = candidates.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+    const tweets = await Tweet.aggregate(pipeline);
 
     return {
-        tweets: paginatedTweets,
-        totalCount: candidates.length,
+        tweets,
         page: pageNum,
         limit: limitNum,
         isPersonalized: true

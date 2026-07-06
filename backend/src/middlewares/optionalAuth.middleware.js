@@ -1,12 +1,12 @@
 import jwt from "jsonwebtoken";
-import { User } from "../models/user.model.js";
+import { fetchUserThroughCache } from "./auth.middleware.js";
 
 const optionalAuth = async (req, res, next) => {
     try {
         const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
         if (token) {
             const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-            const user = await User.findById(decodedToken?._id).select("-password -refreshToken");
+            const user = await fetchUserThroughCache(decodedToken?._id);
             if (user) {
                 req.user = user;
             }

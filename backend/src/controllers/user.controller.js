@@ -7,6 +7,8 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
 import WatchHistory from "../models/watchHistory.model.js";
+import { getCache, setCache, deleteCache, invalidatePattern, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js";
+import { invalidateUserCache } from "../middlewares/auth.middleware.js";
 
 const generateAccessAndRefreshTokens = async (userId) => {
     try {
@@ -203,6 +205,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     }
     user.password = newPassword
     await user.save({ validateBeforeSave: false })
+    invalidateUserCache(req.user?._id);
     return res
         .status(200)
         .json(new ApiResponse(200, {}, "Password changed Successfully"))
@@ -210,10 +213,9 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 })
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user._id).select("-password -refreshToken")
     return res
         .status(200)
-        .json(new ApiResponse(200, user, "current user fetched successfully"))
+        .json(new ApiResponse(200, req.user, "current user fetched successfully"))
 })
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
@@ -231,6 +233,12 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
         { $set: updateFields },
         { new: true }
     ).select("-password -refreshToken");
+
+    // Invalidate user caches
+    await deleteCache(CACHE_KEYS.userProfile(req.user._id));
+    invalidatePattern(`cache:channel:*`);
+    invalidateUserCache(req.user?._id);
+
     return res
         .status(200)
         .json(new ApiResponse(200, user, "Account details updated Successfully"))
@@ -256,6 +264,11 @@ const updateUserAvatar =asyncHandler(async(req,res)=>{
             {new:true}
         ).select("-password")
 
+        // Invalidate user caches
+        await deleteCache(CACHE_KEYS.userProfile(req.user._id));
+        invalidatePattern(`cache:channel:*`);
+        invalidateUserCache(req.user?._id);
+
         return res
         .status(200)
         .json(new ApiResponse(200, user, "Avatar updated Successfully"))
@@ -280,6 +293,11 @@ const updateUserCoverImage =asyncHandler(async(req,res)=>{
             {new:true}
         ).select("-password")
 
+        // Invalidate user caches
+        await deleteCache(CACHE_KEYS.userProfile(req.user._id));
+        invalidatePattern(`cache:channel:*`);
+        invalidateUserCache(req.user?._id);
+
         return res
         .status(200)
         .json(new ApiResponse(200, user, "Cover Image updated Successfully"))
@@ -291,6 +309,14 @@ const getUserChannelProfile= asyncHandler(async(req,res)=>{
     if(!username?.trim()){
         throw new ApiError(400,"Username is missing")
     }
+
+    // Check cache first
+    const cacheKey = CACHE_KEYS.channelProfile(username.toLowerCase());
+    const cached = await getCache(cacheKey);
+    if (cached) {
+        return res.status(200).json(new ApiResponse(200, cached, "User channel fetched successfully (cached)"));
+    }
+
     const channel=await User.aggregate([
         {
             $match:{
@@ -346,6 +372,9 @@ const getUserChannelProfile= asyncHandler(async(req,res)=>{
     if(!channel?.length){
         throw new ApiError(404,"channel does not exists")
     }
+
+    await setCache(cacheKey, channel[0], CACHE_TTL.CHANNEL_PROFILE);
+
     return res
     .status(200)
     .json(

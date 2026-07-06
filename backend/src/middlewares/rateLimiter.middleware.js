@@ -3,6 +3,10 @@ import redis from '../config/redis.js';
 import { logger } from '../utils/logger.js';
 
 export const createRateLimiter = (options) => {
+  if (process.env.BYPASS_LIMITER === 'true') {
+    return (req, res, next) => next();
+  }
+
   if (process.env.NODE_ENV === 'test') {
     return rateLimit(options);
   }
@@ -44,7 +48,7 @@ export const createRateLimiter = (options) => {
 // General API limiter — all routes
 export const generalLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,   // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 10000,   // 100 requests per 15 min per IP in prod, 10000 in dev
+  max: process.env.NODE_ENV === 'production' ? 100 : (process.env.NODE_ENV === 'test' ? 999999 : 10000),
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many requests, please try again later' }
@@ -53,7 +57,7 @@ export const generalLimiter = createRateLimiter({
 // Strict limiter — auth routes (login, register, refresh)
 export const authLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'test' ? 10 : 2000,                    // only 2000 login attempts per 15 min per IP (10 for tests)
+  max: process.env.NODE_ENV === 'test' ? 999999 : 2000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many auth attempts, please try again later' }

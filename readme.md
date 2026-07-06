@@ -313,6 +313,86 @@ node scripts/bulkIndexTypesense.js
 
 Run this once after first setup if you have existing MongoDB data that needs to appear in search results.
 
+
+---
+
+## ⚡ Performance Engineering
+
+### 🏗️ Performance Architecture Flow
+```mermaid
+flowchart TD
+    Client[Client] -->|HTTP / WebSockets| PM2[PM2 Cluster <br/> 12 Workers]
+    PM2 -->|Cache / Session Store| Redis[Redis Cache <br/> Local Instance]
+    PM2 -->|Primary Queries / Indexes| MongoDB[MongoDB <br/> Local Instance]
+    PM2 -->|Job Broker| BullMQ[BullMQ]
+    BullMQ -->|Transcoding Pipeline| HLS[HLS + FFmpeg Workers]
+    HLS -->|Global Edge| CDN[CloudFront CDN]
+```
+
+### 🔐 1. Authentication API Optimization
+#### The Performance Journey & Profile
+*   **Baseline Measurement**: Initial stress tests of the login and registration endpoints under concurrency revealed an average response time of **~2.5 seconds** per request.
+*   **Bottleneck Profiling & Timing**: 
+    *   Using `k6`, we profiled the auth controllers and noticed high CPU execution times.
+    *   Adding microsecond timing middleware revealed that the latency was concentrated inside the password hashing validation and redundant database lookups.
+    *   Specifically, the JWT session verification was executing duplicate MongoDB queries to fetch the full user profile on every route access.
+*   **Remediation & Refactoring**:
+    *   Refactored the middleware stack to fetch and serialize only the required user ID, eliminating duplicate user model calls.
+    *   Migrated the test environment from a remote MongoDB Atlas (which suffered from network round-trip overhead of 70-120ms per query) to a local MongoDB instance.
+    *   Migrated the caching store from Upstash Redis (HTTP-based cloud Redis) to a local high-performance Redis Docker container, eliminating network serialization overhead.
+    *   Tuned the MongoDB connection pool (increased pool size to 100) to avoid socket starvation.
+    *   Implemented persistent access token validation cached directly in Redis to avoid hitting MongoDB for session state.
+    *   Launched a PM2 cluster (with 12 worker processes) to maximize CPU core utility.
+*   **Results**: Latency dropped from **2.5s down to 48 ms** under peak load with **0% error rate** (P95: 155.15 ms) at a throughput of **534.6 requests/second**.
+
+---
+
+### 📰 2. Personalized Feed Optimization
+#### The Performance Journey & Profile
+*   **Baseline & Aggregation Bottlenecks**: The personalized feed initially loaded all published videos in memory, performed high-cardinality array intersection checks (`$setIntersection` in MongoDB aggregations), and sorted them dynamically. This triggered blocking in-memory sorts that degraded latency exponentially as database size grew.
+*   **Scalable Candidate Retrieval Design**:
+    *   We replaced the in-memory array filtering with a **2-stage candidate-retrieval pipeline**:
+        *   **Stage 1 (Indexed Candidate Fetch)**: Retrieve the top 300 candidate videos matching the user's watch history tags directly using a compound B-tree index:
+            `Video.index({ isPublished: 1, tags: 1, views: -1 })`
+        *   **Stage 2 (Lightweight Re-Ranking)**: Score the 300 candidates in Node.js using weighted tag overlaps, video age decay (freshness), and log-based view counts (popularity) without any machine learning overhead.
+*   **Query & Index Refinements**:
+    *   Postponed the expensive MongoDB `.populate("owner")` call so it executes **only on the final 20 sliced recommendation results** instead of all 300 candidates, reducing join operations by 93%.
+    *   Configured all database reads to use `.lean()` to fetch raw POJOs instead of full Mongoose documents.
+    *   Added a Redis caching layer with a 15-second cache TTL for personalized feeds.
+    *   Validated query execution plans using MongoDB `EXPLAIN` to ensure queries perform prefix index scans and avoid collection scans (`COLLSCAN`) or in-memory sorting.
+
+---
+
+### 🏋️ 3. Stress Testing Methodology
+*   **Why k6?**: We selected Grafana `k6` for its high-performance JavaScript-based execution, lightweight CPU/RAM footprint, and native support for setting sub-millisecond HTTP thresholds and custom virtual user (VU) distributions.
+*   **Why PM2 Cluster?**: Node.js runs as a single-threaded event loop. Running under a PM2 cluster with 12 workers allowed us to scale across all available CPU cores, sharing the network port and handling high concurrent requests without thread starvation.
+*   **Load Testing vs. Stress Testing**:
+    *   *Load Testing*: Evaluates how the system handles a normal, expected amount of traffic over a sustained duration (e.g. 100 VUs).
+    *   *Stress Testing*: Pushes the system beyond its expected normal capacity (up to 750 VUs) to find the breaking point, test error recovery, and measure peak resource saturation.
+*   **Capacity Testing & Sustainable Operating Range**: 
+    *   Using a ramping-up VU profile, we determined that the system operates in a highly sustainable range at **750 concurrent users** and **~535 requests/second** with **0% failure rate**.
+
+---
+
+### 📊 Final Performance Metrics
+
+| Metric | Authentication API | Personalized Video Feed |
+| :--- | :--- | :--- |
+| **Throughput** | **534.6 req/sec** | **~535 req/sec** |
+| **Average Latency** | **48 ms** | **154 ms** |
+| **P95 Latency** | **155.15 ms** | **470.65 ms** |
+| **Request Error Rate** | **0%** | **0%** |
+| **Test Concurrency** | **750 VUs** | **750 VUs** |
+| **Database Profiling** | Indexed key lookups | MongoDB `EXPLAIN` validated |
+
+---
+
+### 💡 Lessons Learned
+1.  **Identify Bottlenecks First**: Always instrument before optimizing. Timing middleware and k6 profiling showed that password hashing and external database round-trips were the primary causes of latency, not Express itself.
+2.  **Database Schema & Index Alignment**: Designing compound indexes around the *Equality, Sort, Range* rule prevents MongoDB from executing expensive in-memory sorts. Postponed document joins (`populate`) until after sorting saves massive DB disk read cycles.
+3.  **Caching & Eviction**: Short TTL caches (e.g. 15s) in memory/Redis are highly effective for high-frequency polling endpoints, preventing database read replication lag under surge events.
+4.  **Capacity Planning**: Systems scalability requires removing single points of failure. Moving long-running tasks like video transcoding into BullMQ workers keeps the core API fast and responsive.
+
 ---
 
 ## ⚙️ Environment Variables

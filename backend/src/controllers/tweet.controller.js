@@ -12,6 +12,7 @@ import { getImageUploadUrl, deleteImage } from "../utils/s3ImageUpload.js"
 import { getIO } from "../config/socket.js"
 import { sendNotification } from "../services/notification.service.js"
 import { getPersonalizedTweetFeed, getGlobalTweetFeed } from "../services/tweetFeed.service.js"
+import { getCache, setCache, invalidatePattern, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js"
 
 const createTweet = asyncHandler(async (req, res) => {
     //TODO: create tweet
@@ -56,6 +57,10 @@ const createTweet = asyncHandler(async (req, res) => {
         logger.warn({ err }, 'Socket emit failed for new_tweet');
     }
 
+    // Invalidate tweet feed caches
+    invalidatePattern("cache:tweet:feed:*");
+    invalidatePattern(`cache:tweet:user:${req.user._id}:*`);
+
     return res
     .status(200)
     .json(new ApiResponse(200, savedTweet, "Tweet created successfully"))
@@ -67,6 +72,13 @@ const getUserTweets = asyncHandler(async (req, res) => {
     const page  = parseInt(req.query.page)  || 1;
     const limit = Math.min(parseInt(req.query.limit) || 20, 50);
     const skip  = (page - 1) * limit;
+
+    // Check cache first
+    const cacheKey = CACHE_KEYS.userTweets(userId, page, limit);
+    const cached = await getCache(cacheKey);
+    if (cached) {
+        return res.status(200).json(new ApiResponse(200, cached, "User tweets fetched (cached)"));
+    }
 
     const [tweets, total] = await Promise.all([
       Tweet.find({ owner: userId, isRetweet: false })
@@ -102,8 +114,11 @@ const getUserTweets = asyncHandler(async (req, res) => {
       }
     }
 
+    const data = { tweets, total, page, limit };
+    await setCache(cacheKey, data, CACHE_TTL.USER_TWEETS);
+
     return res.status(200).json(
-      new ApiResponse(200, { tweets, total, page, limit }, 'User tweets fetched')
+      new ApiResponse(200, data, 'User tweets fetched')
     );
 })
 
@@ -128,6 +143,10 @@ const updateTweet = asyncHandler(async (req, res) => {
     await tweet.populate('owner', 'username avatar fullName');
 
     indexTweetSync(tweet).catch(err => logger.error({ err }, 'Typesense sync failed after updateTweet'));
+
+    // Invalidate tweet caches
+    invalidatePattern("cache:tweet:feed:*");
+    invalidatePattern(`cache:tweet:user:${req.user._id}:*`);
 
     return res.status(200).json(
       new ApiResponse(200, tweet, 'Tweet updated successfully')
@@ -177,6 +196,10 @@ const deleteTweet = asyncHandler(async (req, res) => {
         );
       });
     }
+
+    // Invalidate tweet caches
+    invalidatePattern("cache:tweet:feed:*");
+    invalidatePattern(`cache:tweet:user:${req.user._id}:*`);
 
     return res.status(200).json(
       new ApiResponse(200, {}, 'Tweet deleted successfully')
@@ -493,12 +516,21 @@ const getTweetFeed = asyncHandler(async (req, res) => {
 
     const userId = req.user?._id || null;
 
+    // Check cache first
+    const cacheKey = CACHE_KEYS.tweetFeed(userId, page, limit);
+    const cached = await getCache(cacheKey);
+    if (cached) {
+        return res.status(200).json(new ApiResponse(200, cached, "Tweet feed fetched successfully (cached)"));
+    }
+
     let result;
     if (req.user) {
         result = await getPersonalizedTweetFeed(req.user._id, page, limit);
     } else {
         result = await getGlobalTweetFeed(page, limit, null);
     }
+
+    await setCache(cacheKey, result, CACHE_TTL.TWEET_FEED);
 
     return res
         .status(200)

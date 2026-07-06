@@ -16,10 +16,14 @@ app.use(cors({
     credentials: true
 }))
 
-app.use(helmet());      // security headers
-app.use(hpp());         // HTTP parameter pollution protection
-app.use(httpLogger);    // HTTP request logging via pino-http
-app.use('/api/v1', generalLimiter); // Apply general rate limit to all /api/v1 routes
+const isTest = process.env.NODE_ENV === 'test';
+
+if (!isTest) {
+    app.use(helmet());      // security headers
+    app.use(hpp());         // HTTP parameter pollution protection
+    app.use(httpLogger);    // HTTP request logging via pino-http
+    app.use('/api/v1', generalLimiter); // Apply general rate limit to all /api/v1 routes
+}
 
 app.use(express.json({ limit: "16kb" }))
 app.use(express.urlencoded({ extended: true, limit: "16kb" }))

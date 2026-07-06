@@ -16,12 +16,20 @@ import {
     updateVideoViews as updateVideoViewsSync 
 } from "../services/typesenseSync.service.js"
 import { logger } from "../utils/logger.js"
+import { getCache, setCache, deleteCache, invalidatePattern, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js"
 
 
 const getInfiniteHomeFeed = asyncHandler(async (req, res) => {
     const page = parseInt(req.query.page) || 1
     const limit = Math.min(parseInt(req.query.limit) || 20, 50)
     const skip = (page - 1) * limit
+
+    // Check cache first
+    const cacheKey = CACHE_KEYS.videoFeed(page, limit);
+    const cached = await getCache(cacheKey);
+    if (cached) {
+        return res.status(200).json(new ApiResponse(200, cached, "videos fetched Successfully (cached)"));
+    }
 
     const videos = await Video.find({ isPublished: true })
         .sort({ createdAt: -1 })
@@ -31,9 +39,12 @@ const getInfiniteHomeFeed = asyncHandler(async (req, res) => {
 
     const total = await Video.countDocuments({ isPublished: true })
 
+    const data = { videos, total, page, limit };
+    await setCache(cacheKey, data, CACHE_TTL.VIDEO_FEED);
+
     return res
         .status(200)
-        .json(new ApiResponse(200, { videos, total, page, limit }, "videos fetched Successfully"))
+        .json(new ApiResponse(200, data, "videos fetched Successfully"))
 })
 
 
@@ -111,6 +122,9 @@ const getVideoById = asyncHandler(async (req, res) => {
 
             await redisClient.setex(viewKey, 86400, '1') // 24 hour TTL
 
+            // Invalidate cached video detail since views changed
+            await deleteCache(CACHE_KEYS.videoDetail(videoId));
+
             // Sync views to Typesense (fire and forget) if the video is ready and published
             if (video.isPublished && video.processingStatus === "ready") {
                 updateVideoViewsSync(videoId, video.views).catch(err =>
@@ -138,7 +152,11 @@ const getVideoById = asyncHandler(async (req, res) => {
             { user: req.user._id, video: videoId },
             { $set: { watchedAt: new Date() } },
             { upsert: true }
-        ).catch(err => logger.error({ err, videoId }, "WatchHistory upsert error"));
+        )
+        .then(() => {
+            invalidatePattern(`cache:homefeed:${req.user._id}:*`);
+        })
+        .catch(err => logger.error({ err, videoId }, "WatchHistory upsert error"));
     }
 
     const likeCount = await Like.countDocuments({ video: videoId });
@@ -207,6 +225,10 @@ const updateVideo = asyncHandler(async (req, res) => {
             .catch(err => logger.error({ err }, "Typesense index error on update"));
     }
 
+    // Invalidate caches
+    await deleteCache(CACHE_KEYS.videoDetail(videoId));
+    invalidatePattern("cache:video:feed:*");
+
     return res
         .status(200)
         .json(new ApiResponse(200, video, "Video details updated Successfully"))
@@ -253,6 +275,11 @@ const deleteVideo = asyncHandler(async (req, res) => {
     Comment.deleteMany({ video: videoId }).catch(err => logger.error({ err }, "Failed to delete video comments"))
     WatchHistory.deleteMany({ video: videoId }).catch(err => logger.error({ err }, "Failed to delete video watch histories"))
 
+    // Invalidate caches
+    await deleteCache(CACHE_KEYS.videoDetail(videoId));
+    invalidatePattern("cache:video:feed:*");
+    invalidatePattern("cache:homefeed:*");
+
     return res
     .status(200)
     .json(new ApiResponse(200,delVideo,"Video deleted "))
@@ -281,6 +308,9 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
             }
         })
         .catch(err => logger.error({ err }, "Typesense index error on toggle publish"));
+
+    // Invalidate caches
+    invalidatePattern("cache:video:feed:*");
 
     return res
     .status(200)

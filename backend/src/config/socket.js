@@ -21,6 +21,9 @@ export const initSocket = (server) => {
     if (redisClient) {
         const pubClient = redisClient;
         const subClient = pubClient.duplicate();
+        subClient.on("error", (error) => {
+            logger.error({ err: error }, "Redis SubClient Connection Error");
+        });
         io.adapter(createAdapter(pubClient, subClient));
         logger.info("Socket.IO Redis adapter attached successfully.");
     } else {

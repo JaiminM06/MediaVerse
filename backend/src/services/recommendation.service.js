@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
+import { performance } from "perf_hooks";
 import { Video } from "../models/video.model.js";
 import WatchHistory from "../models/watchHistory.model.js";
 import { logger } from "../utils/logger.js";
-import { getCache, setCache } from "../utils/cache.js";
 
 /**
  * Returns videos with overlapping tags to the source video

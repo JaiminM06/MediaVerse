@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { performance } from "perf_hooks";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -7,8 +8,6 @@ import WatchHistory from "../models/watchHistory.model.js";
 import { getCache, setCache, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js";
 import {
     getRecommendations,
-    getContentBasedRecommendations,
-    getBatchContentRecommendations,
     getBatchContentRecommendationsScalable
 } from "../services/recommendation.service.js";
 

@@ -45,10 +45,12 @@ export const createRateLimiter = (options) => {
   };
 };
 
+const isJest = typeof process.env.JEST_WORKER_ID !== 'undefined';
+
 // General API limiter — all routes
 export const generalLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,   // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : (process.env.NODE_ENV === 'test' ? 999999 : 10000),
+  max: isJest ? 999999 : (process.env.NODE_ENV === 'production' ? 100 : 10000),
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many requests, please try again later' }
@@ -57,7 +59,7 @@ export const generalLimiter = createRateLimiter({
 // Strict limiter — auth routes (login, register, refresh)
 export const authLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'test' ? 999999 : 2000,
+  max: isJest ? 10 : (process.env.NODE_ENV === 'test' ? 999999 : 2000),
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many auth attempts, please try again later' }

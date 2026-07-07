@@ -32,6 +32,7 @@ const mockRedis = {
   setex: jest.fn().mockResolvedValue('OK'),
   del: jest.fn().mockResolvedValue(1),
   exists: jest.fn().mockResolvedValue(0),
+  scan: jest.fn().mockResolvedValue(['0', []]),
   duplicate: jest.fn().mockReturnThis(),
   on: jest.fn(),
   connect: jest.fn(),
@@ -166,11 +167,19 @@ export async function setupTestMocks(options = {}) {
       User: {
         findOne:           jest.fn().mockResolvedValue(null),
         findById:          jest.fn().mockReturnValue({
-          select: jest.fn().mockResolvedValue(mockUserInstance),
+          select: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(mockUserInstance),
+            then: (resolve) => resolve(mockUserInstance),
+          }),
+          lean:  jest.fn().mockResolvedValue(mockUserInstance),
           then:  (resolve) => resolve(mockUserInstance),
         }),
         findByIdAndUpdate: jest.fn().mockReturnValue({
-          select: jest.fn().mockResolvedValue(mockUserInstance),
+          select: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(mockUserInstance),
+            then: (resolve) => resolve(mockUserInstance),
+          }),
+          lean:  jest.fn().mockResolvedValue(mockUserInstance),
           then:  (resolve) => resolve(mockUserInstance),
         }),
         create:            jest.fn().mockResolvedValue(mockUserInstance),
@@ -359,6 +368,7 @@ export async function setupTestMocks(options = {}) {
       getContentBasedRecommendations:  jest.fn().mockResolvedValue([]),
       getCollaborativeRecommendations: jest.fn().mockResolvedValue([]),
       getRecommendations:              jest.fn().mockResolvedValue([]),
+      getBatchContentRecommendationsScalable: jest.fn().mockResolvedValue([]),
     }));
   }
 
@@ -412,11 +422,19 @@ export async function resetUserMocks() {
   const { User } = await import('../models/user.model.js');
   User.findOne.mockResolvedValue(null);
   User.findById.mockReturnValue({
-    select: jest.fn().mockResolvedValue(null),
+    select: jest.fn().mockReturnValue({
+      lean: jest.fn().mockResolvedValue(null),
+      then: (cb) => Promise.resolve(null).then(cb),
+    }),
+    lean: jest.fn().mockResolvedValue(null),
     then: (cb) => Promise.resolve(null).then(cb),
   });
   User.findByIdAndUpdate.mockReturnValue({
-    select: jest.fn().mockResolvedValue(null),
+    select: jest.fn().mockReturnValue({
+      lean: jest.fn().mockResolvedValue(null),
+      then: (cb) => Promise.resolve(null).then(cb),
+    }),
+    lean: jest.fn().mockResolvedValue(null),
     then: (cb) => Promise.resolve(null).then(cb),
   });
   User.create.mockResolvedValue({ _id: '507f1f77bcf86cd799439011' });

@@ -561,14 +561,9 @@ describe('Tweet Feed Service', () => {
 
     it('returns personalized feed with followed users tweets', async () => {
       Subscription.find.mockReturnValue({ select: jest.fn().mockResolvedValue([{ channel: 'followed1' }]) });
-      Tweet.find.mockReturnValue({
-        populate: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue([
-          { _id: 't1', content: 'hello', owner: { _id: 'followed1' }, views: 10, retweetCount: 0, replyCount: 0, createdAt: new Date(), toObject: () => ({}) }
-        ])
-      });
-      Like.aggregate.mockResolvedValue([]);
-      Like.find.mockReturnValue({ select: jest.fn().mockReturnThis(), lean: jest.fn().mockResolvedValue([]) });
+      Tweet.aggregate.mockResolvedValue([
+        { _id: 't1', content: 'hello', owner: { _id: 'followed1', username: 'u', avatar: 'a', fullName: 'f' }, views: 10, retweetCount: 0, replyCount: 0, likeCount: 0, likedByCurrentUser: false, engagementScore: 1, createdAt: new Date() }
+      ]);
       const res = await tweetFeedService.getPersonalizedTweetFeed(VID, 1, 20);
       expect(res.isPersonalized).toBe(true);
       expect(res.tweets).toHaveLength(1);
@@ -576,25 +571,16 @@ describe('Tweet Feed Service', () => {
 
     it('calculates engagement score with recency bonus', async () => {
       Subscription.find.mockReturnValue({ select: jest.fn().mockResolvedValue([{ channel: 'f1' }]) });
-      const now = new Date();
-      Tweet.find.mockReturnValue({
-        populate: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue([
-          { _id: 't1', content: 'hello', owner: { _id: 'f1' }, views: 100, retweetCount: 5, replyCount: 2, createdAt: now, toObject: () => ({}) }
-        ])
-      });
-      Like.aggregate.mockResolvedValue([]);
-      Like.find.mockReturnValue({ select: jest.fn().mockReturnThis(), lean: jest.fn().mockResolvedValue([]) });
+      Tweet.aggregate.mockResolvedValue([
+        { _id: 't1', content: 'hello', owner: { _id: 'f1', username: 'u', avatar: 'a', fullName: 'f' }, views: 100, retweetCount: 5, replyCount: 2, likeCount: 0, likedByCurrentUser: false, engagementScore: 40, createdAt: new Date() }
+      ]);
       const res = await tweetFeedService.getPersonalizedTweetFeed(VID, 1, 20);
       expect(res.tweets[0].engagementScore).toBeGreaterThan(0);
     });
 
     it('returns empty when followed users have no recent tweets', async () => {
       Subscription.find.mockReturnValue({ select: jest.fn().mockResolvedValue([{ channel: 'f1' }]) });
-      Tweet.find.mockReturnValue({
-        populate: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockResolvedValue([])
-      });
+      Tweet.aggregate.mockResolvedValue([]);
       const res = await tweetFeedService.getPersonalizedTweetFeed(VID, 1, 20);
       expect(res.tweets).toEqual([]);
     });

@@ -147,7 +147,7 @@ router.route("/feed").get(optionalAuth, getInfiniteHomeFeed);
  */
 router
     .route("/")
-    .get(optionalAuth, getAllVideos)
+    .get(verifyJWT, getAllVideos)
     // Video upload is handled via S3 presigned URLs:
     // Step 1: POST /api/v1/upload/request-url
     // Step 2: PUT directly to S3 (browser → S3, not through this server)
@@ -261,7 +261,7 @@ router
  */
 router
     .route("/:videoId")
-    .get(optionalAuth, getVideoById)
+    .get(verifyJWT, getVideoById)
     .delete(verifyJWT, deleteVideo)
     .patch(verifyJWT, upload.single("thumbnail"), validate(updateVideoSchema), updateVideo);
 

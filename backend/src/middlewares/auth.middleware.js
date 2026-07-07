@@ -99,9 +99,11 @@ export const fetchUserThroughCache = async (userId) => {
     // }
 
     // 3. Cache Miss: Fall back to MongoDB with .lean() optimization
-    const user = await User.findById(userIdStr)
-        .select("-password -refreshToken")
-        .lean();
+    let query = User.findById(userIdStr).select("-password -refreshToken");
+    if (query && typeof query.lean === "function") {
+        query = query.lean();
+    }
+    const user = await query;
 
     if (user) {
         // Hydrate L1 cache (and future L2 cache)

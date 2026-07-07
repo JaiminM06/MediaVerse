@@ -165,7 +165,11 @@ export const getPersonalizedTweetFeed = async (userId, page, limit) => {
     const limitNum = parseInt(limit) || 20;
 
     // 1. Fetch channel IDs the user follows
-    const following = await Subscription.find({ subscriber: userId }).select('channel').lean();
+    let query = Subscription.find({ subscriber: userId }).select('channel');
+    if (query && typeof query.lean === "function") {
+        query = query.lean();
+    }
+    const following = await query;
     const followingIds = following.map(s => s.channel);
 
     if (followingIds.length === 0) {

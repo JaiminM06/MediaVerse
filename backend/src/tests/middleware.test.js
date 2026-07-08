@@ -259,14 +259,14 @@ describe('multer middleware', () => {
 
 describe('Health endpoint', () => {
   it('returns 200 with status ok', async () => {
-    const res = await request(app).get('/health');
+    const res = await request(app).get('/health/liveness');
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
     expect(res.body.uptime).toEqual(expect.any(Number));
   });
 
   it('returns uptime as a positive number', async () => {
-    const res = await request(app).get('/health');
+    const res = await request(app).get('/health/liveness');
     expect(res.body.uptime).toBeGreaterThan(0);
   });
 });

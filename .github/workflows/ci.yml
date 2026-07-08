@@ -91,7 +91,7 @@ jobs:
             -e PORT=8000 \
             -e REDIS_URL=redis://localhost:6379 \
             mediaverse-api
-          timeout 30 bash -c 'until curl -sf http://localhost:8000/api/v1/healthcheck || curl -sf http://localhost:8000/health || curl -sf http://localhost:8000/; do sleep 2; done'
+          timeout 30 bash -c 'until curl -sf http://localhost:8000/api/v1/healthcheck || curl -sf http://localhost:8000/health/liveness || curl -sf http://localhost:8000/; do sleep 2; done'
           echo "Server is healthy"
           docker logs test-container
           docker stop test-container

@@ -17,6 +17,7 @@ import {
 } from "../services/typesenseSync.service.js"
 import { logger } from "../utils/logger.js"
 import { getCache, setCache, deleteCache, invalidatePattern, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js"
+import { registerBufferedView, getBufferedViews } from "../services/viewBuffer.service.js"
 
 
 const getInfiniteHomeFeed = asyncHandler(async (req, res) => {
@@ -97,57 +98,43 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid or missing video ID")
     }
 
-    let video = await Video.findById(videoId).populate("owner", "username avatar")
+    // Attempt to fetch from cache first
+    const cacheKey = CACHE_KEYS.videoDetail(videoId);
+    let videoData = await getCache(cacheKey);
 
-    if (!video) {
-        throw new ApiError(404, "Video not found")
+    let isOwner = false;
+
+    if (!videoData) {
+        const video = await Video.findById(videoId).populate("owner", "username avatar");
+        
+        if (!video) {
+            throw new ApiError(404, "Video not found");
+        }
+        
+        const likeCount = await Like.countDocuments({ video: videoId });
+        
+        videoData = video.toObject();
+        videoData.likeCount = likeCount;
+
+        // Cache the metadata for 5 minutes
+        await setCache(cacheKey, videoData, CACHE_TTL.VIDEO_DETAIL);
     }
 
-    const ownerId = video.owner?._id || video.owner
-    const isOwner = req.user?._id && ownerId && ownerId.toString() === req.user._id.toString()
+    const ownerId = videoData.owner?._id || videoData.owner;
+    isOwner = req.user?._id && ownerId && ownerId.toString() === req.user._id.toString();
 
+    let isNewView = false;
     if (!isOwner) {
         const viewerIdentifier = req.user?._id 
-            ? `user:${req.user._id}` 
-            : `ip:${req.ip}`;
-        const viewKey = `view:${videoId}:${viewerIdentifier}`;
-        const alreadyViewed = await redisClient.get(viewKey)
-        if (!alreadyViewed) {
-            // Increment video views
-            video = await Video.findByIdAndUpdate(
-                videoId,
-                { $inc: { views: 1 } },
-                { new: true }
-            ).populate("owner", "username avatar")
-
-            await redisClient.setex(viewKey, 86400, '1') // 24 hour TTL
-
-            // Invalidate cached video detail since views changed
-            await deleteCache(CACHE_KEYS.videoDetail(videoId));
-
-            // Sync views to Typesense (fire and forget) if the video is ready and published
-            if (video.isPublished && video.processingStatus === "ready") {
-                updateVideoViewsSync(videoId, video.views).catch(err =>
-                    logger.error({ err, videoId }, "Typesense view sync failed")
-                )
-            }
-        }
+            ? req.user._id.toString() 
+            : req.ip;
+        
+        // Register view asynchronously in Redis buffer (returns true if it wasn't viewed in 24h)
+        isNewView = await registerBufferedView(videoId, viewerIdentifier);
     }
 
-    // Add to user watch history
-    if (req.user?._id) {
-        await User.findByIdAndUpdate(
-            req.user._id,
-            {
-                $addToSet: {
-                    watchHistory: videoId
-                }
-            }
-        )
-    }
-
-    // Fire-and-forget record watch history in WatchHistory collection if authenticated
-    if (req.user?._id) {
+    // Fire-and-forget record watch history ONLY if it is a new view
+    if (req.user?._id && isNewView) {
         WatchHistory.findOneAndUpdate(
             { user: req.user._id, video: videoId },
             { $set: { watchedAt: new Date() } },
@@ -159,14 +146,24 @@ const getVideoById = asyncHandler(async (req, res) => {
         .catch(err => logger.error({ err, videoId }, "WatchHistory upsert error"));
     }
 
-    const likeCount = await Like.countDocuments({ video: videoId });
-    const isLiked = req.user?._id
-        ? !!(await Like.exists({ video: videoId, likedBy: req.user._id }))
-        : false;
+    let isLiked = false;
+    if (req.user?._id) {
+        const likeCacheKey = CACHE_KEYS.videoLikeStatus(videoId, req.user._id);
+        const cachedLike = await getCache(likeCacheKey);
+        if (cachedLike !== null) {
+            isLiked = cachedLike.isLiked;
+        } else {
+            isLiked = !!(await Like.exists({ video: videoId, likedBy: req.user._id }));
+            // Cache like status for 2 minutes to prevent DB read contention on viral refreshes
+            await setCache(likeCacheKey, { isLiked }, 120);
+        }
+    }
 
-    const videoData = video.toObject();
-    videoData.likeCount = likeCount;
+    // Fetch buffered views to give approximate real-time view count
+    const bufferedViews = await getBufferedViews(videoId);
+
     videoData.isLiked = isLiked;
+    videoData.views = (videoData.views || 0) + bufferedViews;
 
     return res
         .status(200)

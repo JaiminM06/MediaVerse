@@ -1,5 +1,5 @@
 import Notification from "../models/notification.model.js";
-import { getIO, getOnlineUsers } from "../config/socket.js";
+import { getIO } from "../config/socket.js";
 import { logger } from "../utils/logger.js";
 
 export const sendNotification = async (payload) => {
@@ -19,18 +19,12 @@ export const sendNotification = async (payload) => {
     const savedNotification = await Notification.findById(notification._id)
         .populate("sender", "username avatar");
 
-    // 2. Check if recipient is online
-    const onlineUsers = getOnlineUsers();
-    const recipientKey = String(recipientId);
-
-    if (onlineUsers.has(recipientKey)) {
-        try {
-            const socketId = onlineUsers.get(recipientKey);
-            const io = getIO();
-            io.to(socketId).emit("notification", { notification: savedNotification });
-        } catch (socketError) {
-            logger.error({ err: socketError, recipientId }, "Failed to deliver real-time notification");
-        }
+    // 2. Emit to the recipient's personal Socket.IO room (managed globally via Redis adapter)
+    try {
+        const io = getIO();
+        io.to(`user-${recipientId}`).emit("notification", { notification: savedNotification });
+    } catch (socketError) {
+        logger.error({ err: socketError, recipientId }, "Failed to deliver real-time notification");
     }
 
     return savedNotification;

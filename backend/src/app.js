@@ -1,5 +1,6 @@
 import express from "express"
 import cors from "cors"
+import crypto from "crypto"
 import cookieParser from "cookie-parser"
 import helmet from 'helmet';
 import hpp from 'hpp';
@@ -31,14 +32,38 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }))
 app.use(express.static("public"))
 app.use(cookieParser())
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV || 'development'
-  });
+// Request ID middleware
+app.use((req, res, next) => {
+    const reqId = req.headers['x-request-id'] || crypto.randomUUID();
+    req.id = reqId;
+    res.setHeader('X-Request-ID', reqId);
+    next();
+});
+
+// Basic Liveness Check (Is the process running?)
+app.get('/health/liveness', (req, res) => {
+    res.status(200).json({ status: 'ok', uptime: process.uptime() });
+});
+
+// Readiness Check (Are dependencies connected?)
+import mongoose from "mongoose";
+import redis from "./config/redis.js";
+
+app.get('/health/readiness', async (req, res) => {
+    const isMongoConnected = mongoose.connection.readyState === 1;
+    const isRedisConnected = redis ? redis.status === 'ready' : false;
+
+    const isReady = isMongoConnected && isRedisConnected;
+    const statusCode = isReady ? 200 : 503;
+
+    res.status(statusCode).json({
+        status: isReady ? 'ready' : 'unready',
+        timestamp: new Date().toISOString(),
+        dependencies: {
+            mongodb: isMongoConnected ? 'connected' : 'disconnected',
+            redis: isRedisConnected ? 'connected' : 'disconnected'
+        }
+    });
 });
 
 // Route imports

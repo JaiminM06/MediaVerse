@@ -12,8 +12,11 @@ RUN npm ci --only=production
 # Copy source
 COPY . .
 
-# Create logs directory
-RUN mkdir -p logs
+# Create logs directory and ensure node user owns the app directory
+RUN mkdir -p logs && chown -R node:node /app
+
+# Switch to non-root user
+USER node
 
 EXPOSE 8000
 

@@ -21,21 +21,14 @@ export const createRateLimiter = (options) => {
       // Resolve client IP (supporting reverse proxies if trust proxy is configured)
       const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip;
       const key = `ratelimit:${ip}:${req.baseUrl || req.path}`;
-      
-      const current = await redis.get(key);
-      
-      if (current !== null) {
-        const count = parseInt(current, 10);
-        if (count >= options.max) {
-          return res.status(429).json(options.message);
-        }
-        await redis.incr(key);
-      } else {
-        await redis.multi()
-          .set(key, 1)
-          .pexpire(key, options.windowMs)
-          .exec();
+      const count = await redis.incr(key);
+      if (count === 1) {
+        await redis.pexpire(key, options.windowMs);
       }
+      if (count > options.max) {
+        return res.status(429).json(options.message);
+      }
+      
       next();
     } catch (err) {
       logger.error({ err }, "Redis rate limiter error, falling back to memory store");

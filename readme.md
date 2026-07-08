@@ -560,6 +560,42 @@ MediaVerse was built as a portfolio project to demonstrate production-grade back
 
 ---
 
+## 🚀 Production Deployment
+
+MediaVerse is designed to be deployed on a single Ubuntu 24.04 VPS using Docker Compose, PM2, and Nginx.
+
+### 1. Environment Configuration
+Ensure your production `.env` contains secure, unique secrets. The backend validates these on startup and will exit if critical keys (like `MONGODB_URI` or `REDIS_URL`) are missing.
+
+### 2. Infrastructure (Docker Compose)
+Run the core infrastructure (MongoDB, Redis) inside Docker:
+```bash
+docker-compose -f backend/docker-compose.yml up -d
+```
+This isolates the databases in the Docker network and ensures Redis persistence via AOF, and Docker JSON-file log rotation is active.
+
+### 3. Application (PM2 Cluster)
+To fully utilize multi-core VPS instances, run the Express API using PM2 in cluster mode:
+```bash
+cd backend
+pm2 start ecosystem.config.cjs
+```
+This launches 12 worker processes with `NODE_ENV=production` and graceful `1G` memory limit constraints.
+
+### 4. Reverse Proxy (Nginx)
+A production `nginx.conf` is provided in the repository root. It handles:
+- Reverse proxying traffic to the PM2 cluster on port 8000
+- Forwarding WebSocket `Upgrade` headers for Socket.IO
+- Adding critical security headers (`X-Frame-Options`, `Strict-Transport-Security`)
+- Enabling Gzip compression
+- Configuring `client_max_body_size 500M` for video uploads.
+
+### 5. Health & Readiness Monitoring
+- **Uptime Probe:** `GET /health/liveness` (Returns 200 OK instantly)
+- **Dependency Probe:** `GET /health/readiness` (Checks MongoDB and Redis connections. Returns 503 if infrastructure is down, signaling the Load Balancer to reroute traffic).
+
+---
+
 ## 📄 License
 
 MIT © 2026

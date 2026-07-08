@@ -6,8 +6,9 @@ module.exports = {
       node_args: "-r dotenv/config",
       instances: "max",
       exec_mode: "cluster",
+      max_memory_restart: "1G",
       env: {
-        NODE_ENV: "test"
+        NODE_ENV: "production"
       }
     }
   ]

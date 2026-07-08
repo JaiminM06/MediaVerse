@@ -6,7 +6,6 @@ import { registerRoomHandlers } from "../services/room.service.js";
 import { logger } from "../utils/logger.js";
 
 let io = null;
-const onlineUsers = new Map(); // Map<userId (string), socketId (string)>
 
 export const initSocket = (server) => {
     io = new Server(server, {
@@ -53,8 +52,8 @@ export const initSocket = (server) => {
 
     io.on("connection", (socket) => {
         if (socket.userId) {
-            onlineUsers.set(socket.userId, socket.id);
-            logger.info(`Socket connected: User ${socket.userId} on socket ${socket.id}`);
+            socket.join(`user-${socket.userId}`);
+            logger.info(`Socket connected: User ${socket.userId} joined room user-${socket.userId}`);
         }
 
         // Register Video Room handlers
@@ -62,7 +61,6 @@ export const initSocket = (server) => {
 
         socket.on("disconnect", () => {
             if (socket.userId) {
-                onlineUsers.delete(socket.userId);
                 logger.info(`Socket disconnected: User ${socket.userId}`);
             }
         });
@@ -76,8 +74,4 @@ export const getIO = () => {
         throw new Error("Socket.io is not initialized yet.");
     }
     return io;
-};
-
-export const getOnlineUsers = () => {
-    return onlineUsers;
 };

@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'MediaVerse Infrastructure: S3 Buckets and CloudFront Distribution'
+
+Parameters:
+  RawBucketName:
+    Type: String
+    Description: Name of the bucket for raw video uploads
+  ProcessedBucketName:
+    Type: String
+    Description: Name of the bucket for transcoded HLS videos and thumbnails
+
+Resources:
+  # 1. Raw Uploads Bucket
+  RawBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref RawBucketName
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: ['PUT', 'POST', 'GET']
+            AllowedOrigins: ['*'] # Restrict this to your frontend domain in production
+            ExposedHeaders: ['ETag']
+            MaxAge: 3000
+
+  # 2. Processed Video Bucket (Origin for CloudFront)
+  ProcessedBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref ProcessedBucketName
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: ['GET', 'HEAD']
+            AllowedOrigins: ['*']
+            ExposedHeaders: ['ETag']
+            MaxAge: 3000
+
+  # 3. Origin Access Control (OAC) to secure the Processed Bucket
+  CloudFrontOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub ${AWS::StackName}-OAC
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # 4. Bucket Policy to allow CloudFront to read the Processed Bucket
+  ProcessedBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ProcessedBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub ${ProcessedBucket.Arn}/*
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}
+
+  # 5. CloudFront Distribution
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        HttpVersion: http2
+        PriceClass: PriceClass_100 # US, Europe, Israel
+        Origins:
+          - Id: S3-ProcessedBucket
+            DomainName: !GetAtt ProcessedBucket.DomainName
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+        DefaultCacheBehavior:
+          TargetOriginId: S3-ProcessedBucket
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          ForwardedValues:
+            QueryString: false
+            Headers:
+              - Origin
+              - Access-Control-Request-Headers
+              - Access-Control-Request-Method
+          MinTTL: 0
+          DefaultTTL: 86400
+          MaxTTL: 31536000
+
+Outputs:
+  CloudFrontDomain:
+    Description: The domain name of the CloudFront distribution
+    Value: !GetAtt CloudFrontDistribution.DomainName
+  RawBucketNameOutput:
+    Description: Raw Bucket Name
+    Value: !Ref RawBucket
+  ProcessedBucketNameOutput:
+    Description: Processed Bucket Name
+    Value: !Ref ProcessedBucket

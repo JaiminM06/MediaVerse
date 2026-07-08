@@ -24,6 +24,9 @@ export const CACHE_KEYS = {
     tweetFeed: (userId, page, limit) => `cache:tweet:feed:${userId || 'global'}:${page}:${limit}`,
     userTweets: (userId, page, limit) => `cache:tweet:user:${userId}:${page}:${limit}`,
     homeFeed: (userId, page, limit) => `cache:homefeed:${userId || 'guest'}:${page}:${limit}`,
+    videoViewsBuffer: "video:views:buffer",
+    videoViewDeduplication: (videoId, viewerIdentifier) => `view:${videoId}:${viewerIdentifier}`,
+    videoLikeStatus: (videoId, userId) => `cache:like:${videoId}:${userId}`,
 };
 
 /**

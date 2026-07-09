@@ -60,20 +60,27 @@ export default function VideoPlayer() {
         hls = new Hls({
           maxMaxBufferLength: 10
         });
-        hls.loadSource(video.videoFile);
+        
         hls.attachMedia(videoElement);
+        hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+          hls.loadSource(video.videoFile);
+        });
+        
         setHlsInstance(hls);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           setLevels(hls.levels || []);
+          videoElement.play().catch(err => console.log("Autoplay prevented:", err));
         });
       } else if (videoElement.canPlayType("application/vnd.apple.mpegurl")) {
         // Native support (Safari, iOS)
         videoElement.src = video.videoFile;
+        videoElement.play().catch(err => console.log("Autoplay prevented:", err));
       }
     } else if (video.videoFile) {
       // Fallback for legacy direct MP4 video sources
       videoElement.src = video.videoFile;
+      videoElement.play().catch(err => console.log("Autoplay prevented:", err));
     }
 
     return () => {
@@ -405,6 +412,7 @@ export default function VideoPlayer() {
               ref={videoRef}
               poster={video.thumbnail}
               controls
+              autoPlay
               onEnded={handleEnded}
               onTimeUpdate={(e) => { currentTimeRef.current = e.target.currentTime; }}
               onLoadedMetadata={(e) => { durationRef.current = e.target.duration; }}

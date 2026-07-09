@@ -31,6 +31,11 @@ export default function VideoPlayer() {
   const [currentQuality, setCurrentQuality] = useState("Auto");
   const [hlsInstance, setHlsInstance] = useState(null);
 
+  // Track the actual <video> DOM node so the HLS effect re-runs when it mounts.
+  // A ref alone is not reactive: if the effect bails because the node is null,
+  // it will never run again when the ref is later populated.
+  const [videoNode, setVideoNode] = useState(null);
+
   // COMMENTS STATE
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
@@ -52,9 +57,9 @@ export default function VideoPlayer() {
   useEffect(() => {
     // Only initialize when the fetched video matches the current route id.
     // This prevents attaching HLS to stale data while a new video is loading.
-    if (!id || !video?._id || video._id !== id || !video.videoFile || !videoRef.current) return;
+    if (!id || !video?._id || video._id !== id || !video.videoFile || !videoNode) return;
 
-    const videoElement = videoRef.current;
+    const videoElement = videoNode;
     let hls = null;
 
     const initPlayer = () => {
@@ -106,7 +111,7 @@ export default function VideoPlayer() {
       setLevels([]);
       setCurrentQuality("Auto");
     };
-  }, [id, video?._id, video?.videoFile]);
+  }, [id, video?._id, video?.videoFile, videoNode]);
 
   const handleQualityChange = (e) => {
     const value = e.target.value;
@@ -425,8 +430,11 @@ export default function VideoPlayer() {
           <div className="relative bg-black w-full aspect-video rounded-xl overflow-hidden">
             <video
               key={id}
-              ref={videoRef}
-              poster={video.thumbnail}
+              ref={(node) => {
+                videoRef.current = node;
+                setVideoNode(node);
+              }}
+              poster={video?.thumbnail}
               controls
               autoPlay
               onEnded={handleEnded}

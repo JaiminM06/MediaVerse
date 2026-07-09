@@ -426,7 +426,7 @@ export default function LandingPage() {
               all in one place.
             </motion.p>
 
-            <motion.div variants={fadeUp} className="landing-hero__actions">
+            <motion.div variants={fadeUp} className="landing-hero-cta-wrapper">
               <button
                 className="landing-btn landing-btn--red"
                 onClick={() => handlePlatform("youtube")}

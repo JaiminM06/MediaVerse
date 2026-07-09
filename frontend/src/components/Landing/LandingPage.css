@@ -155,6 +155,10 @@
   transition: var(--landing-transition);
   position: relative;
   cursor: pointer;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
 }
 
 .landing-nav__link:hover {
@@ -274,7 +278,7 @@
   line-height: 1.75;
 }
 
-.landing-hero__actions {
+.landing-hero-cta-wrapper {
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
@@ -659,7 +663,7 @@
     margin: 0 auto 40px;
   }
 
-  .landing-hero__actions {
+  .landing-hero-cta-wrapper {
     justify-content: center;
   }
 

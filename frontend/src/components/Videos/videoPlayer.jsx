@@ -50,48 +50,63 @@ export default function VideoPlayer() {
 
   // Setup Hls.js playback for M3U8 adaptive streams
   useEffect(() => {
-    if (!video || !videoRef.current) return;
+    // Only initialize when the fetched video matches the current route id.
+    // This prevents attaching HLS to stale data while a new video is loading.
+    if (!id || !video?._id || video._id !== id || !video.videoFile || !videoRef.current) return;
 
     const videoElement = videoRef.current;
-    let hls;
+    let hls = null;
 
-    if (video.videoFile && video.videoFile.includes(".m3u8")) {
-      if (Hls.isSupported()) {
+    const initPlayer = () => {
+      if (video.videoFile.includes(".m3u8") && Hls.isSupported()) {
         hls = new Hls({
-          maxMaxBufferLength: 10
+          maxMaxBufferLength: 10,
         });
-        
-        hls.attachMedia(videoElement);
+
         hls.on(Hls.Events.MEDIA_ATTACHED, () => {
           hls.loadSource(video.videoFile);
         });
-        
-        setHlsInstance(hls);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           setLevels(hls.levels || []);
-          videoElement.play().catch(err => console.log("Autoplay prevented:", err));
+          videoElement.play().catch((err) => console.log("Autoplay prevented:", err));
         });
+
+        hls.attachMedia(videoElement);
+        setHlsInstance(hls);
       } else if (videoElement.canPlayType("application/vnd.apple.mpegurl")) {
         // Native support (Safari, iOS)
         videoElement.src = video.videoFile;
-        videoElement.play().catch(err => console.log("Autoplay prevented:", err));
+        videoElement.play().catch((err) => console.log("Autoplay prevented:", err));
+      } else if (video.videoFile) {
+        // Fallback for legacy direct MP4 video sources
+        videoElement.src = video.videoFile;
+        videoElement.play().catch((err) => console.log("Autoplay prevented:", err));
       }
-    } else if (video.videoFile) {
-      // Fallback for legacy direct MP4 video sources
-      videoElement.src = video.videoFile;
-      videoElement.play().catch(err => console.log("Autoplay prevented:", err));
-    }
+    };
+
+    // Critical: on initial mount from Feed the <video> element is brand new
+    // and has autoPlay + poster. The browser may have moved it out of
+    // NETWORK_EMPTY before HLS.attachMedia() runs, causing the attachment to
+    // silently fail. Reset it to a clean state first.
+    videoElement.pause();
+    videoElement.removeAttribute("src");
+    videoElement.load();
+
+    initPlayer();
 
     return () => {
       if (hls) {
         hls.destroy();
       }
+      videoElement.pause();
+      videoElement.removeAttribute("src");
+      videoElement.load();
       setHlsInstance(null);
       setLevels([]);
       setCurrentQuality("Auto");
     };
-  }, [video]);
+  }, [id, video?._id, video?.videoFile]);
 
   const handleQualityChange = (e) => {
     const value = e.target.value;
@@ -409,6 +424,7 @@ export default function VideoPlayer() {
           {/* Video Player Container */}
           <div className="relative bg-black w-full aspect-video rounded-xl overflow-hidden">
             <video
+              key={id}
               ref={videoRef}
               poster={video.thumbnail}
               controls

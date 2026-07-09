@@ -1,0 +1,36 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Do NOT ignore build/config files required for production:
+# tailwind.config.js, postcss.config.js, eslint.config.js, and .env.production
+# must be tracked so Cloudflare/Vercel can build the CSS correctly.
+
+.env.local
+.env.*.local
+
+# Stale Tailwind CLI output (do not commit build artifacts)
+output.css
+.env.production
+

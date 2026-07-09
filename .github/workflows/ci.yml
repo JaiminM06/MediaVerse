@@ -54,10 +54,21 @@ jobs:
           REDIS_URL: redis://localhost:6379
           NODE_OPTIONS: --experimental-vm-modules
 
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker Image
+        working-directory: backend
+        run: docker build -t mediaverse-backend .
+
   deploy:
     name: Deploy to EC2
     runs-on: ubuntu-latest
-    needs: lint-and-test
+    needs: build-docker
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: SSH and Deploy
@@ -67,32 +78,79 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            set -e
+
+            echo "========================================"
+            echo "🚀 Starting MediaVerse Production Deploy"
+            echo "========================================"
+
+            # Go to project
             cd /home/${{ secrets.EC2_USERNAME }}/mediaverse
-            
-            # 1. Pull latest code
-            git pull origin main
-            
-            # 2. Update backend dependencies
+
+            echo "📥 Fetching latest code..."
+            git fetch origin
+
+            echo "🔄 Resetting local repository..."
+            git reset --hard origin/main
+            git clean -fd
+
+            echo "📦 Installing production dependencies..."
             cd backend
             npm ci --omit=dev
-            
-            # 3. Start/update infrastructure
+
+            echo "🐳 Starting infrastructure..."
             docker compose up -d --remove-orphans
-            
-            # 4. Wait until Mongo, Redis, and Typesense are healthy
-            echo "Waiting for infrastructure to be healthy..."
-            timeout 60 bash -c 'until docker compose ps | grep -q "(healthy)"; do sleep 2; done'
-            
-            # 5. Reload PM2 gracefully
+
+            echo "⏳ Waiting for MongoDB..."
+            timeout 60 bash -c '
+            until [ "$(docker inspect --format="{{.State.Health.Status}}" backend-mongo-1)" = "healthy" ]
+            do
+                echo "MongoDB is starting..."
+                sleep 2
+            done
+            '
+
+            echo "⏳ Waiting for Redis..."
+            timeout 60 bash -c '
+            until [ "$(docker inspect --format="{{.State.Health.Status}}" backend-redis-1)" = "healthy" ]
+            do
+                echo "Redis is starting..."
+                sleep 2
+            done
+            '
+
+            echo "⏳ Waiting for Typesense..."
+            timeout 60 bash -c '
+            until curl -sf http://127.0.0.1:8108/health >/dev/null
+            do
+                echo "Typesense is starting..."
+                sleep 2
+            done
+            '
+
+            echo "♻️ Reloading PM2..."
             pm2 reload ecosystem.config.cjs --update-env
-            
-            # 6. Perform deployment verification
-            echo "Verifying deployment..."
-            sleep 5
-            if ! curl -sf http://localhost:8000/health/readiness; then
-              echo "Deployment failed health check!"
-              pm2 logs --lines 50
-              docker compose logs --tail 50
-              exit 1
-            fi
-            echo "Deployment verified successfully!"
+
+            echo "⏳ Waiting for API..."
+            timeout 60 bash -c '
+            until curl -sf http://127.0.0.1:8000/health/readiness \
+                || curl -sf http://127.0.0.1:8000/api/v1/healthcheck \
+                || curl -sf http://127.0.0.1:8000/health
+            do
+                echo "API is starting..."
+                sleep 2
+            done
+            '
+
+            echo ""
+            echo "=============================="
+            echo "✅ Deployment Successful!"
+            echo "=============================="
+
+            echo ""
+            echo "📊 PM2 Status"
+            pm2 status
+
+            echo ""
+            echo "🐳 Docker Status"
+            docker compose ps

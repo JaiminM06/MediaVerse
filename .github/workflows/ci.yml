@@ -31,11 +31,10 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
-        working-directory: backend
 
       - name: Run linter
         run: npm run lint
@@ -96,7 +95,7 @@ jobs:
 
             echo "📦 Installing production dependencies..."
             cd backend
-            npm ci --omit=dev
+            npm install --omit=dev
 
             echo "🐳 Starting infrastructure..."
             docker compose up -d --remove-orphans

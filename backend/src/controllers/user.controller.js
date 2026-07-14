@@ -9,6 +9,12 @@ import mongoose from "mongoose";
 import WatchHistory from "../models/watchHistory.model.js";
 import { getCache, setCache, deleteCache, invalidatePattern, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js";
 import { invalidateUserCache } from "../middlewares/auth.middleware.js";
+import { OAuth2Client } from 'google-auth-library';
+import crypto from 'crypto';
+import { Resend } from 'resend';
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const generateAccessAndRefreshTokens = async (userId) => {
     try {
@@ -96,6 +102,10 @@ const loginUser = asyncHandler(async (req, res) => {
 
     if (!user) {
         throw new ApiError(400, "User does not exist")
+    }
+
+    if (!user.password) {
+        throw new ApiError(401, "This account uses Google or OTP login. Please set a password in your profile settings to enable password login.");
     }
 
     const isPasswordValid = await user.isPasswordCorrect(password)
@@ -198,14 +208,22 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
-    const { oldPassword, newPassword } = req.body
-    const user = await User.findById(req.user?._id)
-    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
-    if (!isPasswordCorrect) {
-        throw new ApiError(400, "Invalid old password")
+    const { oldPassword, newPassword } = req.body;
+    const user = await User.findById(req.user?._id);
+
+    if (user.password) {
+        if (!oldPassword) {
+            throw new ApiError(400, "Old password is required");
+        }
+        const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+        if (!isPasswordCorrect) {
+            throw new ApiError(400, "Invalid old password");
+        }
     }
-    user.password = newPassword
-    await user.save({ validateBeforeSave: false })
+    // If the user has no password (Google/OTP signup), we just set the new password directly
+    
+    user.password = newPassword;
+    await user.save({ validateBeforeSave: false });
     invalidateUserCache(req.user?._id);
     return res
         .status(200)
@@ -413,9 +431,157 @@ const getUserById = asyncHandler(async(req,res)=>{
 })
 
 
+const googleLogin = asyncHandler(async (req, res) => {
+    const { token } = req.body;
+    
+    if (!token) {
+        throw new ApiError(400, "Google token is required");
+    }
+
+    try {
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+        const payload = ticket.getPayload();
+        
+        const { email, name, picture } = payload;
+        
+        let user = await User.findOne({ email });
+        
+        if (!user) {
+            // Create a new user since they don't exist
+            const baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+            const randomString = crypto.randomBytes(3).toString('hex');
+            const username = `${baseUsername}_${randomString}`;
+            
+            user = await User.create({
+                fullName: name,
+                email,
+                username,
+                avatar: picture || "",
+                coverImage: ""
+            });
+        }
+        
+        const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
+        const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+        
+        const options = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "Lax"
+        };
+
+        return res
+            .status(200)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", refreshToken, options)
+            .json(
+                new ApiResponse(
+                    200,
+                    { user: loggedInUser, accessToken, refreshToken },
+                    "Google Login successful"
+                )
+            );
+    } catch (error) {
+        throw new ApiError(401, "Invalid Google token");
+    }
+});
+
+const sendOTP = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+    if (!email) throw new ApiError(400, "Email is required");
+
+    // Generate 6 digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store in Redis (valid for 5 mins = 300s)
+    const otpKey = `otp:${email.toLowerCase()}`;
+    await setCache(otpKey, otp, 300);
+
+    // Send email
+    try {
+        await resend.emails.send({
+            from: 'MediaVerse <noreply@mediaverse.dev-jaimin.me>',
+            to: email,
+            subject: 'Your MediaVerse Login Code',
+            html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaec; border-radius: 10px;">
+                    <h2 style="color: #333;">Sign in to MediaVerse</h2>
+                    <p style="color: #555; font-size: 16px;">Here is your temporary login code. It will expire in 5 minutes.</p>
+                    <div style="background-color: #f4f4f5; padding: 15px; text-align: center; border-radius: 8px; margin: 20px 0;">
+                        <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #000;">${otp}</span>
+                    </div>
+                    <p style="color: #888; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
+                   </div>`
+        });
+    } catch (error) {
+        throw new ApiError(500, "Failed to send OTP email");
+    }
+
+    return res.status(200).json(new ApiResponse(200, {}, "OTP sent successfully"));
+});
+
+const verifyOTP = asyncHandler(async (req, res) => {
+    const { email, otp } = req.body;
+    if (!email || !otp) throw new ApiError(400, "Email and OTP are required");
+
+    const otpKey = `otp:${email.toLowerCase()}`;
+    const cachedOtp = await getCache(otpKey);
+
+    if (!cachedOtp || cachedOtp !== otp) {
+        throw new ApiError(401, "Invalid or expired OTP");
+    }
+
+    // OTP is valid, delete it
+    await deleteCache(otpKey);
+
+    // Check if user exists
+    let user = await User.findOne({ email: email.toLowerCase() });
+    
+    if (!user) {
+        // Create user
+        const baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+        const randomString = crypto.randomBytes(3).toString('hex');
+        const username = `${baseUsername}_${randomString}`;
+        
+        user = await User.create({
+            fullName: baseUsername,
+            email: email.toLowerCase(),
+            username,
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+            coverImage: ""
+        });
+    }
+
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+
+    const options = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Lax"
+    };
+
+    return res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(
+            new ApiResponse(
+                200,
+                { user: loggedInUser, accessToken, refreshToken },
+                "Logged in successfully via OTP"
+            )
+        );
+});
+
 export {
     registerUser,
     loginUser,
+    googleLogin,
+    sendOTP,
+    verifyOTP,
     logoutUser,
     refreshAccessToken,
     changeCurrentPassword,

@@ -6,6 +6,9 @@ import {
     getUserChannelProfile, 
     getWatchHistory, 
     loginUser, 
+    googleLogin,
+    sendOTP,
+    verifyOTP,
     logoutUser, 
     refreshAccessToken, 
     registerUser, 
@@ -135,6 +138,10 @@ router.route("/register").post(
  *               $ref: '#/components/schemas/ApiError'
  */
 router.route("/login").post(authLimiter, validate(loginSchema), loginUser);
+
+router.route("/google-login").post(authLimiter, googleLogin);
+router.route("/send-otp").post(authLimiter, sendOTP);
+router.route("/verify-otp").post(authLimiter, verifyOTP);
 
 // Secured routes
 /**

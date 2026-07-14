@@ -4,20 +4,26 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { GoogleLogin } from '@react-oauth/google';
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [loginMethod, setLoginMethod] = useState("password"); // 'password' or 'otp'
+  const [otpStep, setOtpStep] = useState(1); // 1 = email, 2 = otp
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleLogin = async (e) => {
+  const handlePasswordLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
       const res = await axios.post(
@@ -29,6 +35,73 @@ function Login() {
       navigate("/youtube/feed");
     } catch (err) {
       setError(err.response?.data?.message || "Invalid credentials. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendOTP = async (e) => {
+    e.preventDefault();
+    if (!email) {
+      setError("Please enter your email.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/users/send-otp`,
+        { email },
+        { withCredentials: true }
+      );
+      setSuccess("OTP sent successfully to your email!");
+      setOtpStep(2);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to send OTP. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    if (!otp) {
+      setError("Please enter the OTP.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/users/verify-otp`,
+        { email, otp },
+        { withCredentials: true }
+      );
+      login(res.data.data.user);
+      navigate("/youtube/feed");
+    } catch (err) {
+      setError(err.response?.data?.message || "Invalid or expired OTP.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/users/google-login`,
+        { token: credentialResponse.credential },
+        { withCredentials: true }
+      );
+      login(res.data.data.user);
+      navigate("/youtube/feed");
+    } catch (err) {
+      setError(err.response?.data?.message || "Google Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -88,45 +161,102 @@ function Login() {
                 {error}
               </motion.div>
             )}
+            {success && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-6 p-3 bg-green-500/10 border border-green-500/20 text-green-400 text-sm rounded-xl flex items-center gap-2"
+              >
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full shrink-0" />
+                {success}
+              </motion.div>
+            )}
           </AnimatePresence>
 
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-[var(--yt-text-secondary)]">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--yt-text-muted)]" size={18} />
-                <input
-                  type="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-[var(--tw-card)] border border-[var(--tw-border)] rounded-xl text-white placeholder-[var(--yt-text-muted)] focus:outline-none focus:border-[var(--tw-primary)] focus:ring-1 focus:ring-[var(--tw-primary)] transition-all text-sm"
-                  required
-                />
+          <form
+            onSubmit={
+              loginMethod === "password"
+                ? handlePasswordLogin
+                : otpStep === 1
+                ? handleSendOTP
+                : handleVerifyOTP
+            }
+            className="space-y-5"
+          >
+            {loginMethod === "password" ? (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-[var(--yt-text-secondary)]">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--yt-text-muted)]" size={18} />
+                    <input
+                      type="email"
+                      placeholder="name@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 bg-[var(--tw-card)] border border-[var(--tw-border)] rounded-xl text-white placeholder-[var(--yt-text-muted)] focus:outline-none focus:border-[var(--tw-primary)] focus:ring-1 focus:ring-[var(--tw-primary)] transition-all text-sm"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-[var(--yt-text-secondary)]">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--yt-text-muted)]" size={18} />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-11 pr-12 py-3 bg-[var(--tw-card)] border border-[var(--tw-border)] rounded-xl text-white placeholder-[var(--yt-text-muted)] focus:outline-none focus:border-[var(--tw-primary)] focus:ring-1 focus:ring-[var(--tw-primary)] transition-all text-sm"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--yt-text-muted)] hover:text-white transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : otpStep === 1 ? (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-[var(--yt-text-secondary)]">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--yt-text-muted)]" size={18} />
+                  <input
+                    type="email"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-[var(--tw-card)] border border-[var(--tw-border)] rounded-xl text-white placeholder-[var(--yt-text-muted)] focus:outline-none focus:border-[var(--tw-primary)] focus:ring-1 focus:ring-[var(--tw-primary)] transition-all text-sm"
+                    required
+                  />
+                </div>
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-[var(--yt-text-secondary)]">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--yt-text-muted)]" size={18} />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-12 py-3 bg-[var(--tw-card)] border border-[var(--tw-border)] rounded-xl text-white placeholder-[var(--yt-text-muted)] focus:outline-none focus:border-[var(--tw-primary)] focus:ring-1 focus:ring-[var(--tw-primary)] transition-all text-sm"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--yt-text-muted)] hover:text-white transition-colors"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+            ) : (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-[var(--yt-text-secondary)]">6-Digit Code</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--yt-text-muted)]" size={18} />
+                  <input
+                    type="text"
+                    placeholder="Enter the OTP from your email"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    maxLength={6}
+                    className="w-full pl-11 pr-4 py-3 bg-[var(--tw-card)] border border-[var(--tw-border)] rounded-xl text-white placeholder-[var(--yt-text-muted)] focus:outline-none focus:border-[var(--tw-primary)] focus:ring-1 focus:ring-[var(--tw-primary)] transition-all text-sm tracking-widest font-mono"
+                    required
+                  />
+                </div>
+                <div className="flex justify-end pt-1">
+                  <button type="button" onClick={() => { setOtpStep(1); setOtp(""); setSuccess(""); setError(""); }} className="text-xs text-[var(--tw-primary)] hover:underline">Change Email</button>
+                </div>
               </div>
-            </div>
+            )}
 
             <motion.button
               whileHover={{ scale: 1.01 }}
@@ -138,13 +268,59 @@ function Login() {
               {loading ? (
                 <>
                   <Loader2 size={18} className="animate-spin" />
-                  Signing in...
+                  {loginMethod === "password" ? "Signing in..." : otpStep === 1 ? "Sending..." : "Verifying..."}
                 </>
-              ) : (
+              ) : loginMethod === "password" ? (
                 "Sign In"
+              ) : otpStep === 1 ? (
+                "Send Login Code"
+              ) : (
+                "Verify Code"
               )}
             </motion.button>
           </form>
+
+          <div className="text-center mt-4">
+            {loginMethod === "password" ? (
+              <button
+                onClick={() => {
+                  setLoginMethod("otp");
+                  setError("");
+                  setSuccess("");
+                }}
+                className="text-sm text-[var(--yt-text-secondary)] hover:text-white transition-colors"
+              >
+                Use a <span className="text-[var(--tw-primary)] font-semibold">Login Code (OTP)</span> instead
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setLoginMethod("password");
+                  setError("");
+                  setSuccess("");
+                }}
+                className="text-sm text-[var(--yt-text-secondary)] hover:text-white transition-colors"
+              >
+                Use a <span className="text-[var(--tw-primary)] font-semibold">Password</span> instead
+              </button>
+            )}
+          </div>
+
+          <div className="mt-6 flex flex-col items-center">
+            <div className="relative flex items-center w-full mb-6">
+              <div className="flex-grow border-t border-[var(--tw-border)]"></div>
+              <span className="flex-shrink-0 mx-4 text-[var(--yt-text-muted)] text-sm font-medium">OR</span>
+              <div className="flex-grow border-t border-[var(--tw-border)]"></div>
+            </div>
+            
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError("Google Login Failed")}
+              theme="filled_black"
+              shape="pill"
+              text="signin_with"
+            />
+          </div>
 
           <p className="text-center text-[var(--yt-text-secondary)] text-sm mt-8">
             Don't have an account?{" "}

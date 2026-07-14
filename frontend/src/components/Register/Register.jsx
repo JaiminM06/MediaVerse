@@ -3,6 +3,8 @@ import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Mail, Lock, Upload, Eye, EyeOff, Loader2, Image as ImageIcon } from "lucide-react";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { GoogleLogin } from '@react-oauth/google';
 
 function Register() {
   const [fullName, setFullName] = useState("");
@@ -16,6 +18,7 @@ function Register() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -50,6 +53,24 @@ function Register() {
       setTimeout(() => navigate("/login"), 1500);
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/users/google-login`,
+        { token: credentialResponse.credential },
+        { withCredentials: true }
+      );
+      login(res.data.data.user);
+      navigate("/youtube/feed");
+    } catch (err) {
+      setError(err.response?.data?.message || "Google Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -197,6 +218,22 @@ function Register() {
               )}
             </motion.button>
           </form>
+
+          <div className="mt-5 flex flex-col items-center">
+            <div className="relative flex items-center w-full mb-5">
+              <div className="flex-grow border-t border-[var(--tw-border)]"></div>
+              <span className="flex-shrink-0 mx-4 text-[var(--yt-text-muted)] text-xs font-medium">OR</span>
+              <div className="flex-grow border-t border-[var(--tw-border)]"></div>
+            </div>
+            
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError("Google Login Failed")}
+              theme="filled_black"
+              shape="pill"
+              text="signup_with"
+            />
+          </div>
 
           <p className="text-center text-[var(--yt-text-secondary)] text-sm mt-6">
             Already have an account?{" "}

@@ -5,6 +5,7 @@ import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider, N
 import axios from 'axios'
 import { API_BASE_URL } from './config/api.js'
 import { AuthProvider } from './context/AuthContext.jsx'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 
 // Auth pages
 import Login from './components/Login/Login.jsx'
@@ -128,8 +129,10 @@ const router = createBrowserRouter(
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </GoogleOAuthProvider>
   </StrictMode>,
 )

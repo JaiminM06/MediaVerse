@@ -63,7 +63,7 @@ describe('User Controller — loginUser', () => {
   });
 
   it('returns 200 with tokens and cookies', async () => {
-    const mockUser = { _id: TEST_USER_ID, username: 'test', email: 'test@test.com', isPasswordCorrect: jest.fn().mockResolvedValue(true), generateAccessToken: jest.fn().mockReturnValue('at'), generateRefreshToken: jest.fn().mockReturnValue('rt'), save: jest.fn().mockResolvedValue(true) };
+    const mockUser = { _id: TEST_USER_ID, username: 'test', email: 'test@test.com', password: 'hashedpassword', isPasswordCorrect: jest.fn().mockResolvedValue(true), generateAccessToken: jest.fn().mockReturnValue('at'), generateRefreshToken: jest.fn().mockReturnValue('rt'), save: jest.fn().mockResolvedValue(true) };
     User.findOne.mockResolvedValue(mockUser);
     User.findById.mockReturnValue(sel({ _id: TEST_USER_ID, username: 'test', email: 'test@test.com', refreshToken: 'rt', generateAccessToken: jest.fn().mockReturnValue('at'), generateRefreshToken: jest.fn().mockReturnValue('rt'), save: jest.fn().mockResolvedValue(true) }));
     const { res, next } = createMockRes();
@@ -81,7 +81,7 @@ describe('User Controller — loginUser', () => {
   });
 
   it('returns 401 when wrong password', async () => {
-    User.findOne.mockResolvedValue({ _id: TEST_USER_ID, username: 'test', email: 'test@test.com', isPasswordCorrect: jest.fn().mockResolvedValue(false) });
+    User.findOne.mockResolvedValue({ _id: TEST_USER_ID, username: 'test', email: 'test@test.com', password: 'hashedpassword', isPasswordCorrect: jest.fn().mockResolvedValue(false) });
     const { res, next } = createMockRes();
     await userController.loginUser(makeReq({ body: { email: 'test@test.com', password: 'wrong' } }), res, next);
     expect(next).toHaveBeenCalledWith(expect.any(Error));
@@ -131,7 +131,7 @@ describe('User Controller — changeCurrentPassword', () => {
   });
 
   it('returns 200 on success', async () => {
-    User.findById.mockResolvedValue({ _id: TEST_USER_ID, isPasswordCorrect: jest.fn().mockResolvedValue(true), save: jest.fn().mockResolvedValue(true) });
+    User.findById.mockResolvedValue({ _id: TEST_USER_ID, password: 'hashedpassword', isPasswordCorrect: jest.fn().mockResolvedValue(true), save: jest.fn().mockResolvedValue(true) });
     const { res, next } = createMockRes();
     await userController.changeCurrentPassword(makeReq({ user: { _id: TEST_USER_ID }, body: { oldPassword: 'old', newPassword: 'new123456' } }), res, next);
     expect(res.status).toHaveBeenCalledWith(200);
@@ -139,7 +139,7 @@ describe('User Controller — changeCurrentPassword', () => {
 
   it('returns 400 when old password wrong', async () => {
     const { res, next } = createMockRes();
-    User.findById.mockResolvedValue({ _id: TEST_USER_ID, isPasswordCorrect: jest.fn().mockResolvedValue(false) });
+    User.findById.mockResolvedValue({ _id: TEST_USER_ID, password: 'hashedpassword', isPasswordCorrect: jest.fn().mockResolvedValue(false) });
     await userController.changeCurrentPassword(makeReq({ user: { _id: TEST_USER_ID }, body: { oldPassword: 'wrong', newPassword: 'new' } }), res, next);
     expect(next).toHaveBeenCalledWith(expect.any(Error));
   });

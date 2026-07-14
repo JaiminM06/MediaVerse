@@ -13,8 +13,8 @@ import { OAuth2Client } from 'google-auth-library';
 import crypto from 'crypto';
 import { Resend } from 'resend';
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const resend = new Resend(process.env.RESEND_API_KEY);
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || 'dummy_google_client_id');
+const resend = new Resend(process.env.RESEND_API_KEY || 're_123456789');
 
 const generateAccessAndRefreshTokens = async (userId) => {
     try {
